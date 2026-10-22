@@ -1,0 +1,119 @@
+<div class="cabecalho">
+  <div>
+    <h2>Coleções</h2>
+    <p class="texto-muted">Escopos de pesquisa: com uma coleção, o RAG busca somente nela (isolamento por SQL).</p>
+  </div>
+  <p-button label="Nova coleção" icon="pi pi-plus" (onClick)="nova()" />
+</div>
+
+@if (colecoes().length === 0) {
+  <div class="vazio surface-card">
+    <i class="pi pi-folder"></i>
+    <h3>Nenhuma coleção ainda</h3>
+    <p class="texto-muted">Ex.: "Manual do produto", "Contratos 2026". Excluir coleção não exclui documentos.</p>
+  </div>
+} @else {
+  <div class="grade">
+    @for (colecao of colecoes(); track colecao.id) {
+      <article class="cartao-colecao surface-card">
+        <header (click)="abrirDetalhe(colecao)">
+          <i class="pi pi-folder-open"></i>
+          <div>
+            <h3>{{ colecao.nome }}</h3>
+            @if (colecao.descricao) {
+              <p class="desc texto-muted">{{ colecao.descricao }}</p>
+            }
+          </div>
+        </header>
+
+        <div class="meta texto-muted">
+          {{ colecao.quantDocumentos }} documento(s) · atualizada em {{ exibirData(colecao.dataAtualizacao) }}
+        </div>
+
+        <footer>
+          <p-button icon="pi pi-eye" severity="secondary" size="small" text pTooltip="Ver documentos"
+                    (onClick)="abrirDetalhe(colecao)" />
+          <p-button icon="pi pi-pencil" severity="secondary" size="small" text pTooltip="Editar"
+                    (onClick)="editar(colecao)" />
+          <p-button icon="pi pi-trash" severity="danger" size="small" text pTooltip="Excluir"
+                    (onClick)="confirmarExclusao(colecao)" />
+        </footer>
+      </article>
+    }
+  </div>
+}
+
+<!-- Criar/editar -->
+<p-dialog [header]="editandoId ? 'Editar coleção' : 'Nova coleção'" [(visible)]="dialogEdicao"
+          [modal]="true" [style]="{ width: '420px' }">
+  <div class="form-colecao">
+    <label class="campo">
+      <span>Nome *</span>
+      <input pInputText [(ngModel)]="nome" name="nome" placeholder="Ex.: Contratos 2026" maxlength="120" />
+    </label>
+    <label class="campo">
+      <span>Descrição</span>
+      <textarea pTextarea [(ngModel)]="descricao" name="descricao" rows="3"
+                placeholder="Para que serve este escopo? (opcional)" maxlength="500"></textarea>
+    </label>
+    <p-button [label]="editandoId ? 'Salvar' : 'Criar'" icon="pi pi-check" [loading]="salvando()"
+              (onClick)="salvar()" [fluid]="true" />
+  </div>
+</p-dialog>
+
+<!-- Detalhe: documentos da coleção -->
+<p-dialog [header]="detalhe()?.nome ?? 'Coleção'" [(visible)]="dialogDetalhe"
+          [modal]="true" [style]="{ width: '640px' }">
+  @if (detalhe(); as d) {
+    <div class="detalhe-colecao">
+      @if (d.descricao) {
+        <p class="desc texto-muted">{{ d.descricao }}</p>
+      }
+
+      <div class="topo">
+        <span class="texto-muted">{{ d.quantDocumentos }} documento(s)</span>
+        <p-button label="Vincular documento" icon="pi pi-link" size="small" (onClick)="abrirVincular()" />
+      </div>
+
+      @if (d.documentos.length === 0) {
+        <p class="texto-muted vazio-docs">Nenhum documento vinculado.</p>
+      } @else {
+        <ul class="docs">
+          @for (documento of d.documentos; track documento.id) {
+            <li>
+              <i class="pi" [class]="documento.tipoArquivo === 'PDF' ? 'pi-file-pdf' : documento.tipoArquivo === 'DOCX' ? 'pi-file-word' : 'pi-file'"></i>
+              <div class="info">
+                <b>{{ documento.nomeOriginal }}</b>
+                <small class="texto-muted">{{ exibirBytes(documento.tamanhoBytes) }} · {{ exibirData(documento.dataUpload) }}</small>
+              </div>
+              <p-tag [severity]="severidade(documento.estado)" [value]="documento.estado" />
+              <p-button icon="pi pi-link-slash" severity="danger" size="small" text pTooltip="Desvincular"
+                        (onClick)="desvincular(documento.id)" />
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  }
+</p-dialog>
+
+<!-- Vincular -->
+<p-dialog header="Vincular documento" [(visible)]="dialogVincular" [modal]="true" [style]="{ width: '420px' }">
+  @if (candidatos().length === 0) {
+    <p class="texto-muted">Nenhum documento disponível para vincular.</p>
+  } @else {
+    <div class="form-colecao">
+      <label class="campo">
+        <span>Documento</span>
+        <p-select [(ngModel)]="candidatoEscolhido" name="candidatoEscolhido"
+                  [options]="candidatos()" optionLabel="nomeOriginal"
+                  placeholder="Escolha o documento" [filter]="true" />
+      </label>
+      <p-button label="Vincular" icon="pi pi-link" [disabled]="!candidatoEscolhido"
+                (onClick)="vincular()" [fluid]="true" />
+    </div>
+  }
+</p-dialog>
+
+<p-confirmdialog />
+<p-toast position="top-right" />

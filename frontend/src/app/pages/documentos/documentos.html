@@ -1,0 +1,181 @@
+<div class="cabecalho">
+  <div>
+    <h2>Documentos</h2>
+    <p class="texto-muted">PDF, DOCX e TXT — processados com embeddings reais.</p>
+  </div>
+  <p-button label="Enviar documentos" icon="pi pi-upload" (onClick)="abrirUpload()" />
+</div>
+
+<div class="filtros surface-card">
+  <input pInputText [(ngModel)]="filtroNome" name="filtroNome"
+         placeholder="Buscar por nome…" (keyup.enter)="buscar()" />
+
+  <p-select [(ngModel)]="filtroTipo" name="filtroTipo" [options]="tipos"
+            optionLabel="label" placeholder="Tipo" (onChange)="buscar()" />
+
+  <p-select [(ngModel)]="filtroEstado" name="filtroEstado" [options]="estados"
+            optionLabel="label" placeholder="Estado" (onChange)="buscar()" />
+
+  <p-button icon="pi pi-search" (onClick)="buscar()" severity="contrast" />
+</div>
+
+@if (pagina(); as p) {
+  @if (p.conteudo.length === 0) {
+    <div class="vazio surface-card">
+      <i class="pi pi-folder-open"></i>
+      <h3>Nenhum documento encontrado</h3>
+      <p class="texto-muted">Envie seu primeiro arquivo para começar o processamento.</p>
+      <p-button label="Enviar documentos" icon="pi pi-upload" (onClick)="abrirUpload()" />
+    </div>
+  }
+
+  <div class="grade">
+    @for (documento of p.conteudo; track documento.id) {
+      <article class="cartao-doc surface-card">
+        <header>
+          <i class="pi" [class]="
+            documento.tipoArquivo === 'PDF' ? 'pi-file-pdf' :
+            documento.tipoArquivo === 'DOCX' ? 'pi-file-word' : 'pi-file'"></i>
+          <div class="titulo">
+            <h3 [title]="documento.nomeOriginal">{{ documento.nomeOriginal }}</h3>
+            <span class="meta texto-muted">
+              {{ exibirBytes(documento.tamanhoBytes) }}
+              @if (documento.totalPaginas) {
+                · {{ documento.totalPaginas }} pág.
+              }
+              · {{ exibirData(documento.dataUpload) }}
+            </span>
+          </div>
+        </header>
+
+        <p-tag [severity]="severidade(documento.estado)" [value]="rotulo(documento.estado)" [rounded]="false" />
+
+        @if (documento.mensagemErro) {
+          <small class="erro">{{ documento.mensagemErro }}</small>
+        }
+
+        @if (documento.colecoes.length) {
+          <div class="colecoes">
+            @for (colecao of documento.colecoes; track colecao.id) {
+              <span class="chip">{{ colecao.nome }}</span>
+            }
+          </div>
+        }
+
+        <footer>
+          <p-button icon="pi pi-eye" severity="secondary" size="small" text
+                    pTooltip="Detalhes" (onClick)="abrirDetalhe(documento.id)" />
+          <p-button icon="pi pi-download" severity="secondary" size="small" text
+                    pTooltip="Baixar original" (onClick)="baixar(documento.id, documento.nomeOriginal)" />
+          @if (documento.estado === 'FALHOU' || documento.estado === 'CONCLUIDO') {
+            <p-button icon="pi pi-refresh" severity="secondary" size="small" text
+                      pTooltip="Reprocessar" (onClick)="reprocessar(documento.id)" />
+          }
+          <p-button icon="pi pi-trash" severity="danger" size="small" text
+                    pTooltip="Excluir" (onClick)="confirmarExclusao(documento.id, documento.nomeOriginal)" />
+        </footer>
+      </article>
+    }
+  </div>
+
+  <div class="paginacao">
+    <span class="texto-muted">
+      Página {{ p.pagina + 1 }} de {{ p.totalPaginas }} · {{ p.totalElementos }} item(ns)
+    </span>
+    <div class="nav">
+      <p-button icon="pi pi-chevron-left" size="small" text severity="secondary"
+                [disabled]="p.pagina === 0" (onClick)="paginar({ first: (p.pagina - 1) * 8 })" />
+      <p-button icon="pi pi-chevron-right" size="small" text severity="secondary"
+                [disabled]="p.pagina + 1 >= p.totalPaginas" (onClick)="paginar({ first: (p.pagina + 1) * 8 })" />
+    </div>
+  </div>
+} @else if (carregando()) {
+  <p class="texto-muted">Carregando…</p>
+}
+
+<!-- Upload -->
+<p-dialog header="Enviar documentos" [(visible)]="dialogUpload"
+          [modal]="true" [style]="{ width: '440px' }">
+  <div class="form-upload">
+    <label class="dropzone" [class.preenchido]="arquivosEscolhidos().length > 0">
+      <i class="pi pi-cloud-upload"></i>
+      @if (arquivosEscolhidos().length === 0) {
+        <span>Toque para escolher os arquivos<br />
+          <small class="texto-muted">PDF, DOCX, TXT — até 25 MB</small>
+        </span>
+      } @else {
+        <span>{{ arquivosEscolhidos().length }} arquivo(s) escolhido(s)</span>
+        <ul class="arquivos">
+          @for (arquivo of arquivosEscolhidos(); track arquivo.name) {
+            <li class="texto-muted">{{ arquivo.name }} · {{ exibirBytes(arquivo.size) }}</li>
+          }
+        </ul>
+      }
+      <input type="file" multiple accept=".pdf,.docx,.txt" (change)="escolherArquivos($event)" />
+    </label>
+
+    <label class="campo">
+      <span>Coleção (opcional)</span>
+      <p-select [(ngModel)]="colecaoEscolhida" name="colecaoEscolhida"
+                [options]="colecoes()" optionLabel="nome"
+                placeholder="Sem escopo específico" [filter]="true" [showClear]="true" />
+    </label>
+
+    <p-button label="Enviar" icon="pi pi-send" [loading]="enviando()"
+              [disabled]="arquivosEscolhidos().length === 0"
+              (onClick)="enviar()" [fluid]="true" />
+  </div>
+</p-dialog>
+
+<!-- Detalhe -->
+<p-dialog header="Detalhe do documento" [(visible)]="dialogDetalhe"
+          [modal]="true" [style]="{ width: '560px' }">
+  @if (detalhe(); as d) {
+    <div class="detalhe">
+      <h3 class="nome">{{ d.nomeOriginal }}</h3>
+
+      <div class="linha"><span>Estado</span><p-tag [severity]="severidade(d.estado)" [value]="rotulo(d.estado)" /></div>
+      <div class="linha"><span>Tamanho</span><b>{{ exibirBytes(d.tamanhoBytes) }}</b></div>
+      <div class="linha"><span>Páginas</span><b>{{ d.totalPaginas ?? '—' }}</b></div>
+      <div class="linha"><span>Trechos indexados</span><b>{{ d.quantTrechos }}</b></div>
+      <div class="linha"><span>Enviado em</span><b>{{ exibirData(d.dataUpload) }}</b></div>
+      <div class="linha"><span>Processado em</span><b>{{ exibirData(d.dataProcessamento) }}</b></div>
+      <div class="linha"><span>Modelo de embedding</span><b>{{ d.modeloEmbedding ?? '—' }}</b></div>
+      @if (d.tarefaEstado) {
+        <div class="linha"><span>Última tarefa</span>
+          <b>{{ rotuloTarefa(d.tarefaEstado) }}@if (d.tarefaTentativas) { ({{ d.tarefaTentativas }} tent.) }</b>
+        </div>
+      }
+      @if (d.mensagemErro) {
+        <div class="linha erro"><span>Erro</span><b>{{ d.mensagemErro }}</b></div>
+      }
+      @if (d.tarefaUltimoErro) {
+        <div class="linha erro"><span>Último erro da tarefa</span><b>{{ d.tarefaUltimoErro }}</b></div>
+      }
+      @if (d.colecoes.length) {
+        <div class="linha">
+          <span>Coleções</span>
+          <div class="colecoes">
+            @for (colecao of d.colecoes; track colecao.id) {
+              <span class="chip">{{ colecao.nome }}</span>
+            }
+          </div>
+        </div>
+      }
+
+      <div class="acoes">
+        <p-button icon="pi pi-download" label="Baixar" severity="contrast" size="small"
+                  (onClick)="baixar(d.id, d.nomeOriginal)" />
+        @if (d.estado === 'FALHOU' || d.estado === 'CONCLUIDO') {
+          <p-button icon="pi pi-refresh" label="Reprocessar" severity="warn" size="small"
+                    (onClick)="reprocessar(d.id)" />
+        }
+        <p-button icon="pi pi-trash" label="Excluir" severity="danger" size="small"
+                  (onClick)="confirmarExclusao(d.id, d.nomeOriginal)" />
+      </div>
+    </div>
+  }
+</p-dialog>
+
+<p-confirmdialog styleClass="confirma-escuro" />
+<p-toast position="top-right" />

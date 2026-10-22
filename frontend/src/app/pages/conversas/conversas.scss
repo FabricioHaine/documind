@@ -1,0 +1,91 @@
+:host {
+  display: block;
+}
+
+.cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.2rem;
+
+  h2 {
+    margin: 0;
+    font-size: 1.4rem;
+  }
+
+  p {
+    margin: 0.15rem 0 0;
+  }
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+
+  .conversa {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+
+    &:hover {
+      border-color: var(--dm-accent);
+    }
+
+    .esquerda {
+      min-width: 0;
+
+      h3 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      small {
+        b {
+          color: var(--dm-accent);
+        }
+      }
+    }
+  }
+}
+
+.vazio {
+  text-align: center;
+  padding: 3rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+
+  .pi {
+    font-size: 2rem;
+    color: var(--dm-text-muted);
+  }
+
+  h3 {
+    margin: 0;
+  }
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+
+  .campo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+
+    span {
+      font-size: 0.82rem;
+      color: var(--dm-text-muted);
+    }
+  }
+}

@@ -1,0 +1,99 @@
+/* =========================================================================
+   DocuMind — Design tokens (dark premium, fonte Inter)
+   Uma única fonte de verdade para todas as telas e overrides do PrimeNG.
+   ========================================================================= */
+
+:root {
+  /* Superfícies */
+  --dm-bg: #0b0f14;
+  --dm-surface: #11161d;
+  --dm-surface-2: #1a212b;
+  --dm-border: #232c38;
+
+  /* Texto */
+  --dm-text: #e6edf3;
+  --dm-text-muted: #8b98a9;
+
+  /* Acento + semânticos */
+  --dm-accent: #2dd4bf;
+  --dm-accent-hover: #5eead4;
+  --dm-accent-dim: rgba(45, 212, 191, 0.12);
+  --dm-danger: #f87171;
+  --dm-warn: #fbbf24;
+  --dm-success: #34d399;
+
+  /* Medidas */
+  --dm-radius: 12px;
+  --dm-sidebar-w: 240px;
+  --dm-font: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+.app-dark {
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--dm-bg);
+  color: var(--dm-text);
+  font-family: var(--dm-font);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbars discretas */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--dm-border) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--dm-border);
+  border-radius: 8px;
+}
+
+a {
+  color: var(--dm-accent);
+  text-decoration: none;
+}
+
+/* ------------------------------------------------------------------
+   Overrides pontuais do PrimeNG para casar com os tokens da marca.
+   (o resto continua do preset Aura dark — consistência garantida)
+   ------------------------------------------------------------------ */
+
+.p-button.p-button-primary,
+.p-button.p-button-contrast {
+  border-radius: var(--dm-radius);
+}
+
+.p-card {
+  background: var(--dm-surface);
+  border: 1px solid var(--dm-border);
+  border-radius: var(--dm-radius);
+}
+
+.p-dialog {
+  border-radius: 14px;
+}
+
+.surface-card {
+  background: var(--dm-surface);
+  border: 1px solid var(--dm-border);
+  border-radius: var(--dm-radius);
+  padding: 1.25rem;
+}
+
+.texto-muted {
+  color: var(--dm-text-muted);
+}

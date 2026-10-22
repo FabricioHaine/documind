@@ -1,0 +1,34 @@
+# --- Java / Maven ---
+backend/target/
+*.class
+*.jar
+!backend/mvnw
+!backend/mvnw.cmd
+
+# --- Log e temporarios ---
+*.log
+*.tmp
+
+# --- Angular / Node ---
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/coverage/
+npm-debug.log*
+package-lock.bak
+
+# --- Segredos / ambiente (NUNCA versionar) ---
+.env
+backend/.env
+*.env
+!.env.example
+
+# --- Dados locais ---
+backend/storage/
+
+# --- IDEs / SO ---
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db

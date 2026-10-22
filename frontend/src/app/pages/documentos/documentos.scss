@@ -1,0 +1,251 @@
+:host {
+  display: block;
+}
+
+.cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.2rem;
+
+  h2 {
+    margin: 0;
+    font-size: 1.4rem;
+  }
+
+  p {
+    margin: 0.15rem 0 0;
+  }
+}
+
+.filtros {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  margin-bottom: 1.2rem;
+
+  input {
+    flex: 1;
+    min-width: 180px;
+  }
+}
+
+.grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.cartao-doc {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+
+  header {
+    display: flex;
+    gap: 0.7rem;
+    align-items: flex-start;
+
+    .pi {
+      color: var(--dm-accent);
+      font-size: 1.3rem;
+      margin-top: 0.15rem;
+    }
+
+    .titulo {
+      min-width: 0;
+
+      h3 {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .meta {
+        font-size: 0.78rem;
+      }
+    }
+  }
+
+  .erro {
+    color: var(--dm-danger);
+    font-size: 0.8rem;
+  }
+
+  .colecoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+
+    .chip {
+      font-size: 0.72rem;
+      padding: 0.15rem 0.55rem;
+      border-radius: 999px;
+      background: var(--dm-surface-2);
+      border: 1px solid var(--dm-border);
+      color: var(--dm-text-muted);
+    }
+  }
+
+  footer {
+    display: flex;
+    gap: 0.2rem;
+    border-top: 1px solid var(--dm-border);
+    padding-top: 0.5rem;
+    margin-top: auto;
+  }
+}
+
+.vazio {
+  text-align: center;
+  padding: 3rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+
+  .pi {
+    font-size: 2rem;
+    color: var(--dm-text-muted);
+  }
+
+  h3 {
+    margin: 0;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.paginacao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1rem;
+
+  .nav {
+    display: flex;
+    gap: 0.2rem;
+  }
+}
+
+.refrescando {
+  display: block;
+  margin-top: 0.6rem;
+  opacity: 0.7;
+}
+
+/* uploads/detalhes */
+.form-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  .dropzone {
+    border: 1.5px dashed var(--dm-border);
+    border-radius: var(--dm-radius);
+    padding: 1.4rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+
+    &:hover,
+    &.preenchido {
+      border-color: var(--dm-accent);
+      background: var(--dm-accent-dim);
+    }
+
+    .pi {
+      font-size: 1.5rem;
+      color: var(--dm-accent);
+    }
+
+    input[type='file'] {
+      display: none;
+    }
+
+    .arquivos {
+      list-style: none;
+      margin: 0.6rem 0 0;
+      padding: 0;
+      font-size: 0.8rem;
+      max-height: 120px;
+      overflow: auto;
+      text-align: left;
+    }
+  }
+
+  .campo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+
+    span {
+      font-size: 0.82rem;
+      color: var(--dm-text-muted);
+    }
+  }
+}
+
+.detalhe {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+
+  .nome {
+    margin: 0 0 0.4rem;
+    font-size: 1.05rem;
+    word-break: break-word;
+  }
+
+  .linha {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--dm-border);
+
+    span {
+      color: var(--dm-text-muted);
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+
+    b {
+      font-weight: 500;
+      text-align: right;
+      word-break: break-word;
+    }
+
+    &.erro b {
+      color: var(--dm-danger);
+    }
+  }
+
+  .colecoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    justify-content: flex-end;
+
+    .chip {
+      font-size: 0.72rem;
+      padding: 0.15rem 0.55rem;
+      border-radius: 999px;
+      background: var(--dm-surface-2);
+      border: 1px solid var(--dm-border);
+    }
+  }
+
+  .acoes {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.8rem;
+    justify-content: flex-end;
+  }
+}

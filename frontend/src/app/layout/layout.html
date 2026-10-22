@@ -1,0 +1,42 @@
+<div class="layout">
+  <aside class="sidebar">
+    <div class="marca">
+      <span class="marca-logo">DM</span>
+      <span class="marca-nome">DocuMind</span>
+    </div>
+
+    <nav class="menu">
+      @for (item of menu; track item.rota) {
+        <a
+          class="menu-item"
+          [routerLink]="item.rota"
+          routerLinkActive="ativo"
+          [routerLinkActiveOptions]="{ exact: false }"
+        >
+          <i class="pi" [class]="item.icone"></i>
+          <span>{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+
+    <div class="rodape">
+      @if (usuario; as u) {
+        <div class="usuario">
+          <span class="usuario-inicial">{{ (u.nome || '?').slice(0, 1).toUpperCase() }}</span>
+          <div class="usuario-info">
+            <span class="usuario-nome">{{ u.nome }}</span>
+            <span class="usuario-email">{{ u.email }}</span>
+          </div>
+        </div>
+      }
+      <button class="sair" type="button" (click)="sair()">
+        <i class="pi pi-sign-out"></i>
+        <span>Sair</span>
+      </button>
+    </div>
+  </aside>
+
+  <main class="conteudo">
+    <router-outlet />
+  </main>
+</div>

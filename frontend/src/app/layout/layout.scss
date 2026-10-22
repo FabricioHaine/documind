@@ -1,0 +1,149 @@
+.layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--dm-sidebar-w);
+  background: var(--dm-surface);
+  border-right: 1px solid var(--dm-border);
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  z-index: 10;
+
+  .marca {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.4rem 0.4rem 1.2rem;
+
+    .marca-logo {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      background: var(--dm-accent-dim);
+      color: var(--dm-accent);
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      border-radius: 10px;
+      border: 1px solid rgba(45, 212, 191, 0.35);
+    }
+
+    .marca-nome {
+      font-weight: 700;
+      font-size: 1.05rem;
+      letter-spacing: 0.01em;
+    }
+  }
+
+  .menu {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      padding: 0.7rem 0.75rem;
+      border-radius: 10px;
+      color: var(--dm-text-muted);
+      font-weight: 500;
+      transition: background 0.15s ease, color 0.15s ease;
+
+      i {
+        font-size: 1rem;
+      }
+
+      &:hover {
+        background: var(--dm-surface-2);
+        color: var(--dm-text);
+      }
+
+      &.ativo {
+        background: var(--dm-accent-dim);
+        color: var(--dm-accent);
+      }
+    }
+  }
+
+  .rodape {
+    border-top: 1px solid var(--dm-border);
+    padding-top: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    .usuario {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.35rem 0.4rem;
+
+      .usuario-inicial {
+        width: 32px;
+        height: 32px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--dm-surface-2);
+        color: var(--dm-text);
+        font-weight: 600;
+        border: 1px solid var(--dm-border);
+      }
+
+      .usuario-info {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+
+        .usuario-nome {
+          font-size: 0.85rem;
+          font-weight: 600;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .usuario-email {
+          font-size: 0.75rem;
+          color: var(--dm-text-muted);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+      }
+    }
+
+    .sair {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: transparent;
+      color: var(--dm-text-muted);
+      border: none;
+      padding: 0.6rem 0.75rem;
+      border-radius: 10px;
+      cursor: pointer;
+      font: inherit;
+      transition: color 0.15s ease, background 0.15s ease;
+
+      &:hover {
+        color: var(--dm-danger);
+        background: rgba(248, 113, 113, 0.08);
+      }
+    }
+  }
+}
+
+.conteudo {
+  flex: 1;
+  margin-left: var(--dm-sidebar-w);
+  padding: 1.6rem 2rem;
+  max-width: 1200px;
+}

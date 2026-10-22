@@ -1,0 +1,248 @@
+:host {
+  display: block;
+}
+
+.cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.2rem;
+  gap: 1rem;
+
+  h2 {
+    margin: 0;
+    font-size: 1.4rem;
+  }
+
+  p {
+    margin: 0.15rem 0 0;
+  }
+
+  .abas {
+    display: flex;
+    gap: 0.3rem;
+    background: var(--dm-surface);
+    border: 1px solid var(--dm-border);
+    border-radius: 12px;
+    padding: 0.3rem;
+
+    .aba {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: transparent;
+      border: none;
+      color: var(--dm-text-muted);
+      font: inherit;
+      font-size: 0.85rem;
+      padding: 0.45rem 0.85rem;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+
+      &.ativa {
+        background: var(--dm-accent-dim);
+        color: var(--dm-accent);
+      }
+    }
+  }
+}
+
+.painel {
+  margin-bottom: 1.2rem;
+
+  textarea {
+    width: 100%;
+    resize: vertical;
+  }
+
+  .linha-acao {
+    display: flex;
+    gap: 0.7rem;
+    align-items: center;
+
+    input {
+      min-width: 160px;
+    }
+  }
+}
+
+.conta {
+  font-size: 0.82rem;
+  margin: 0 0 0.7rem;
+}
+
+.hits {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+
+  .hit {
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    transition: border-color 0.15s ease;
+
+    &:hover {
+      border-color: var(--dm-accent);
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+
+      .ref {
+        color: var(--dm-accent);
+        font-weight: 700;
+        font-size: 0.85rem;
+      }
+
+      .doc {
+        flex: 1;
+        min-width: 0;
+        font-size: 0.92rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .score {
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 0.15rem 0.55rem;
+        border-radius: 999px;
+
+        &.alta {
+          background: rgba(52, 211, 153, 0.15);
+          color: var(--dm-success);
+        }
+
+        &.media {
+          background: rgba(251, 191, 36, 0.15);
+          color: var(--dm-warn);
+        }
+
+        &.baixa {
+          background: var(--dm-surface-2);
+          color: var(--dm-text-muted);
+        }
+      }
+    }
+
+    .meta {
+      font-size: 0.75rem;
+    }
+
+    .conteudo {
+      margin: 0;
+      font-size: 0.86rem;
+      line-height: 1.5;
+      color: var(--dm-text);
+      white-space: pre-wrap;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+  }
+}
+
+.vazio {
+  text-align: center;
+  padding: 3rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+
+  .pi {
+    font-size: 2rem;
+    color: var(--dm-text-muted);
+  }
+
+  h3 {
+    margin: 0;
+  }
+}
+
+.vazio-docs {
+  text-align: center;
+  padding: 2rem;
+}
+
+.docs-metadados {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.7rem 0.9rem;
+
+    .pi {
+      color: var(--dm-accent);
+      font-size: 1.1rem;
+    }
+
+    .info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+
+      b {
+        font-size: 0.9rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      small {
+        font-size: 0.72rem;
+      }
+    }
+  }
+}
+
+.citacao-aberta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+
+  .cabeca {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+  }
+
+  .infos {
+    font-size: 0.8rem;
+  }
+
+  .trecho {
+    margin: 0;
+    padding: 1rem;
+    background: var(--dm-surface-2);
+    border: 1px solid var(--dm-border);
+    border-left: 3px solid var(--dm-accent);
+    border-radius: 10px;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    max-height: 320px;
+    overflow: auto;
+  }
+
+  footer {
+    display: flex;
+    justify-content: flex-end;
+  }
+}

@@ -1,0 +1,58 @@
+<div class="cabecalho">
+  <div>
+    <h2>Conversas</h2>
+    <p class="texto-muted">Perguntas respondidas com busca vetorial real + citações verificáveis.</p>
+  </div>
+  <p-button label="Nova conversa" icon="pi pi-plus" (onClick)="abrirNova()" />
+</div>
+
+@if (conversas().length === 0) {
+  <div class="vazio surface-card">
+    <i class="pi pi-comments"></i>
+    <h3>Nenhuma conversa ainda</h3>
+    <p class="texto-muted">Crie uma conversa e pergunte sobre seus documentos CONCLUIDOS.</p>
+    <p-button label="Nova conversa" icon="pi pi-plus" (onClick)="abrirNova()" />
+  </div>
+} @else {
+  <div class="lista">
+    @for (conversa of conversas(); track conversa.id) {
+      <article class="conversa surface-card" (click)="entrar(conversa)">
+        <div class="esquerda">
+          <h3>{{ conversa.titulo }}</h3>
+          <small class="texto-muted">
+            {{ exibirData(conversa.dataAtualizacao) }}
+            @if (conversa.colecaoNome) {
+              · escopo: <b>{{ conversa.colecaoNome }}</b>
+            }
+          </small>
+        </div>
+        <div class="acao" (click)="$event.stopPropagation()">
+          <p-button icon="pi pi-trash" severity="danger" size="small" text pTooltip="Excluir"
+                    (onClick)="confirmarExclusao(conversa)" />
+        </div>
+      </article>
+    }
+  </div>
+}
+
+<!-- Nova conversa -->
+<p-dialog header="Nova conversa" [(visible)]="dialogNova" [modal]="true" [style]="{ width: '420px' }">
+  <div class="form">
+    <label class="campo">
+      <span>Título (opcional)</span>
+      <input pInputText [(ngModel)]="titulo" name="titulo" maxlength="160"
+             placeholder="Padrão: 1ª pergunta" />
+    </label>
+    <label class="campo">
+      <span>Escopo (coleção)</span>
+      <p-select [(ngModel)]="colecaoEscolhida" name="colecaoEscolhida"
+                [options]="colecoes()" optionLabel="nome" placeholder="Todos os documentos"
+                [filter]="true" [showClear]="true" />
+    </label>
+    <p-button label="Criar e abrir" icon="pi pi-arrow-right" [loading]="criando()"
+              (onClick)="criar()" [fluid]="true" />
+  </div>
+</p-dialog>
+
+<p-confirmdialog />
+<p-toast position="top-right" />

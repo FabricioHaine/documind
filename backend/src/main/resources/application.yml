@@ -1,0 +1,93 @@
+spring:
+  application:
+    name: documind
+
+  datasource:
+    url: ${DOCUMIND_DB_URL:jdbc:postgresql://localhost:5432/documind}
+    username: ${DOCUMIND_DB_USERNAME:documind}
+    password: ${DOCUMIND_DB_PASSWORD:documind}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+
+  # O schema e gerido EXCLUSIVAMENTE por migracoes Flyway.
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        jdbc.time_zone: UTC
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: ${DOCUMIND_DOCUMENT_MAX_SIZE_MB:25}MB
+      max-request-size: ${DOCUMIND_DOCUMENT_MAX_SIZE_MB:25}MB
+      file-size-threshold: 2MB
+
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  port: 8080
+  error:
+    include-stacktrace: never
+    include-message: never
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+
+# =============================================================================
+# Configuracao da aplicacao (pode ser sobrescrita por variaveis de ambiente)
+# =============================================================================
+app:
+  cors:
+    allowed-origins: ${DOCUMIND_CORS_ORIGINS:http://localhost:4200}
+  storage:
+    path: ${DOCUMIND_DOCUMENT_STORAGE_PATH:./storage}
+  documents:
+    max-size-mb: ${DOCUMIND_DOCUMENT_MAX_SIZE_MB:25}
+    uploads-per-hour: ${DOCUMIND_DOCUMENT_UPLOADS_PER_HOUR:30}
+  rag:
+    chunk-size-chars: ${DOCUMIND_RAG_CHUNK_SIZE_CHARS:1200}
+    chunk-overlap-chars: ${DOCUMIND_RAG_CHUNK_OVERLAP_CHARS:200}
+  security:
+    jwt-exp-minutes: ${DOCUMIND_JWT_EXP_MINUTES:120}
+    rate-limit-per-minute: ${DOCUMIND_RATE_LIMIT_PER_MINUTE:60}
+
+# jwt-secret e lido via @Value/Environment (DOCUMIND_JWT_SECRET) para permitir
+# validacao explicita no startup (obrigatorio, minimo 32 caracteres).
+
+# =============================================================================
+# Integracao de IA (padrao: API compativel com OpenAI, ex.: Ollama em localhost)
+# A ausencia de DOCUMIND_AI_BASE_URL desabilita o pipeline de RAG de forma
+# explicita: o sistema inicia normalmente, mas endpoints de IA retornam 503
+# com mensagem clara de configuracao pendente (nunca respostas simuladas).
+# =============================================================================
+ai:
+  base-url: ${DOCUMIND_AI_BASE_URL:}
+  api-key: ${DOCUMIND_AI_API_KEY:}
+  chat-model: ${DOCUMIND_AI_CHAT_MODEL:}
+  embedding-model: ${DOCUMIND_AI_EMBEDDING_MODEL:}
+  embedding-dimensions: ${DOCUMIND_AI_EMBEDDING_DIMENSIONS:768}
+  max-context-chunks: ${DOCUMIND_AI_MAX_CONTEXT_CHUNKS:6}
+  min-relevance-threshold: ${DOCUMIND_AI_MIN_RELEVANCE_THRESHOLD:0.35}
+  request-timeout-seconds: ${DOCUMIND_AI_REQUEST_TIMEOUT_SECONDS:120}
+  max-retries: ${DOCUMIND_AI_MAX_RETRIES:2}
+  embedding-batch-size: ${DOCUMIND_AI_EMBEDDING_BATCH_SIZE:16}
+  max-output-tokens: ${DOCUMIND_AI_MAX_OUTPUT_TOKENS:1024}
+
+logging:
+  level:
+    com.documind: INFO
+    org.springframework.security: INFO

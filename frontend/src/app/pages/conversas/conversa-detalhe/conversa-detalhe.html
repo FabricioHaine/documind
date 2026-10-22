@@ -1,0 +1,141 @@
+<div class="chat">
+  <header class="chat-topo">
+    <a routerLink="/conversas" pTooltip="Voltar" class="voltar">
+      <i class="pi pi-arrow-left"></i>
+    </a>
+    <div class="titulo">
+      <h2>{{ conversa()?.titulo ?? 'Conversa' }}</h2>
+      @if (conversa()?.colecaoNome; as escopo) {
+        <span class="escopo"><i class="pi pi-filter"></i> {{ escopo }}</span>
+      } @else {
+        <span class="escopo texto-muted"><i class="pi pi-globe"></i> todo o acervo</span>
+      }
+    </div>
+    <p-button icon="pi pi-cog" severity="secondary" size="small" text
+              pTooltip="Renomear / escopo" (onClick)="abrirAjustes()" />
+  </header>
+
+  <div class="mensagens">
+    @if (carregando()) {
+      <p class="texto-muted carregando">carregando histórico…</p>
+    }
+
+    @if (!carregando() && mensagens().length === 0) {
+      <div class="boas-vindas surface-card">
+        <i class="pi pi-sparkles"></i>
+        <h3>Pergunte aos seus documentos</h3>
+        <p class="texto-muted">
+          A resposta vem com citações [n] clicáveis. Se a busca não achar evidência, o sistema
+          avisa SEM inventar.
+        </p>
+      </div>
+    }
+
+    @for (mensagem of mensagens(); track mensagem.id) {
+      @if (mensagem.autor === 'USUARIO') {
+        <div class="linha usuario">
+          <div class="bolha">{{ mensagem.conteudo }}</div>
+        </div>
+      } @else {
+        <div class="linha assistente">
+          <div class="bolha" [class.sem-evidencia]="mensagem.estado === 'SEM_EVIDENCIA'"
+               [class.erro]="mensagem.estado === 'ERRO'">
+            @if (mensagem.estado === 'SEM_EVIDENCIA') {
+              <span class="rotulo"><i class="pi pi-info-circle"></i> sem evidencia</span>
+            }
+            @if (mensagem.estado === 'ERRO') {
+              <span class="rotulo errolbl"><i class="pi pi-times-circle"></i> erro</span>
+            }
+            <p class="texto">{{ mensagem.conteudo }}</p>
+
+            @if (mensagem.citacoes.length) {
+              <div class="citacoes">
+                <span class="titulo-citacoes texto-muted">Fontes:</span>
+                @for (citacao of mensagem.citacoes; track citacao.id) {
+                  <button type="button" class="citacao" (click)="abrirCitacao(citacao)">
+                    <b>[{{ citacao.referencia }}]</b>
+                    {{ citacao.documentoNome }}
+                    @if (citacao.paginaInicio) {
+                      <small>pág. {{ citacao.paginaInicio }}</small>
+                    }
+                  </button>
+                }
+              </div>
+            }
+
+            @if (mensagem.metadados?.modelo) {
+              <small class="texto-muted tecnicos">
+                {{ mensagem.metadados.modelo }} · {{ mensagem.metadados.latenciaMs }}ms
+                @if (mensagem.metadados.tokensEntrada) { · in {{ mensagem.metadados.tokensEntrada }} }
+                @if (mensagem.metadados.tokensSaida) { · out {{ mensagem.metadados.tokensSaida }} }
+              </small>
+            }
+          </div>
+        </div>
+      }
+    }
+
+    @if (perguntando()) {
+      <div class="linha assistente">
+        <div class="bolha pensando">
+          <i class="pi pi-spin pi-spinner"></i> recuperando contexto e gerando resposta…
+        </div>
+      </div>
+    }
+  </div>
+
+  <form class="entrada" (ngSubmit)="perguntar()">
+    <input pInputText [(ngModel)]="novaPergunta" name="novaPergunta"
+           placeholder="Pergunte sobre os documentos…" maxlength="4000"
+           [disabled]="perguntando()" autocomplete="off" />
+    <p-button icon="pi pi-send" type="submit" [loading]="perguntando()"
+              [disabled]="!novaPergunta.trim()" />
+  </form>
+</div>
+
+<!-- Citação aberta -->
+<p-dialog header="Fonte da citação" [(visible)]="dialogCitacao" [modal]="true"
+          [style]="{ width: '620px' }">
+  @if (citacaoAberta(); as c) {
+    <div class="citacao-aberta">
+      <div class="cabeca">
+        <b class="doc">{{ c.documentoNome }}</b>
+        <p-tag value="referência [{{ c.referencia }}]" />
+      </div>
+
+      <div class="infos texto-muted">
+        trecho #{{ c.indiceTrecho + 1 }}
+        @if (c.paginaInicio) {
+          · páginas {{ c.paginaInicio }}@if (c.paginaFim && c.paginaFim !== c.paginaInicio) {–{{ c.paginaFim }} }
+        }
+      </div>
+
+      <blockquote class="trecho">{{ c.conteudoTrecho }}</blockquote>
+
+      <footer>
+        @if (c.documentoId) {
+          <p-button label="Ver documento" icon="pi pi-external-link" size="small"
+                    severity="contrast" (onClick)="abrirDocumento(c.documentoId)" />
+        }
+      </footer>
+    </div>
+  }
+</p-dialog>
+
+<!-- Ajustes -->
+<p-dialog header="Ajustes da conversa" [(visible)]="dialogAjustes" [modal]="true" [style]="{ width: '420px' }">
+  <div class="form">
+    <label class="campo">
+      <span>Título</span>
+      <input pInputText [(ngModel)]="tituloAjuste" name="tituloAjuste" maxlength="160" />
+    </label>
+    <label class="campo">
+      <span>Escopo (coleção)</span>
+      <p-select [(ngModel)]="escopoAjuste" name="escopoAjuste" [options]="colecoes()"
+                optionLabel="nome" placeholder="Todos os documentos" [filter]="true" [showClear]="true" />
+    </label>
+    <p-button label="Salvar" icon="pi pi-check" (onClick)="salvarAjustes()" [fluid]="true" />
+  </div>
+</p-dialog>
+
+<p-toast position="top-right" />

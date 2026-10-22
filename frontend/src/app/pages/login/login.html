@@ -1,0 +1,35 @@
+<div class="tela">
+  <div class="cartao">
+    <div class="marca">
+      <span class="logo">DM</span>
+      <h1>DocuMind</h1>
+      <p class="sub">Pergunte aos seus documentos — com fontes verificáveis.</p>
+    </div>
+
+    @if (erro(); as msg) {
+      <p-message severity="error">{{ msg }}</p-message>
+    }
+
+    <form (ngSubmit)="entrar()" autocomplete="on">
+      <label class="campo">
+        <span>E-mail</span>
+        <input pInputText type="email" [(ngModel)]="email" name="email"
+               placeholder="voce@empresa.com" autocomplete="email" required />
+      </label>
+
+      <label class="campo">
+        <span>Senha</span>
+        <p-password [(ngModel)]="senha" name="senha" [feedback]="false"
+                    [toggleMask]="true" placeholder="********" autocomplete="current-password" />
+      </label>
+
+      <p-button type="submit" label="Entrar" icon="pi pi-sign-in"
+                [loading]="enviando()" [fluid]="true" styleClass="mt-2" />
+    </form>
+
+    <p class="alternativa texto-muted">
+      Ainda não tem conta?
+      <a routerLink="/registrar">Criar conta</a>
+    </p>
+  </div>
+</div>

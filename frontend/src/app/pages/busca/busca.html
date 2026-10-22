@@ -1,0 +1,123 @@
+<div class="cabecalho">
+  <div>
+    <h2>Pesquisa</h2>
+    <p class="texto-muted">Trechos por significado (vetorial) ou documentos por metadados.</p>
+  </div>
+  <div class="abas">
+    <button type="button" class="aba" [class.ativa]="aba() === 'semantico'" (click)="aba.set('semantico')">
+      <i class="pi pi-sparkles"></i> Semântica
+    </button>
+    <button type="button" class="aba" [class.ativa]="aba() === 'metadados'" (click)="aba.set('metadados')">
+      <i class="pi pi-list"></i> Metadados
+    </button>
+  </div>
+</div>
+
+@if (aba() === 'semantico') {
+  <div class="painel surface-card">
+    <form (ngSubmit)="pesquisarSemantico()">
+      <textarea pTextarea [(ngModel)]="pergunta" name="pergunta" rows="3" maxlength="2000"
+                placeholder="Descreva o que procura pelo significado… ex.: cláusula que fala de penaltidade por atraso"
+                [disabled]="pesquisando()"></textarea>
+      <div class="linha-acao">
+        <p-select [(ngModel)]="escopo" name="escopo" [options]="colecoes()" optionLabel="nome"
+                  placeholder="Todo o acervo" [filter]="true" [showClear]="true" />
+        <p-button label="Buscar" icon="pi pi-search" type="submit" [loading]="pesquisando()" />
+      </div>
+    </form>
+  </div>
+
+  @if (resultados(); as hits) {
+    @if (hits.length === 0) {
+      <div class="vazio surface-card">
+        <i class="pi pi-search-minus"></i>
+        <h3>Sem trechos acima do limiar</h3>
+        <p class="texto-muted">Nada suficientemente similar no escopo — nada de resultados "aproximados" falsos.</p>
+      </div>
+    } @else {
+      <p class="conta texto-muted">
+        {{ hits.length }} trecho(s) com similaridade acima do limiar para "{{ ultimaPergunta }}"
+      </p>
+      <div class="hits">
+        @for (hit of hits; track hit.trechoId) {
+          <article class="hit surface-card" (click)="abrir(hit)">
+            <header>
+              <span class="ref">[{{ hit.referencia }}]</span>
+              <b class="doc">{{ hit.documentoNome }}</b>
+              <span class="score" [class]="classificacao(hit)">{{ similaridade(hit) }}</span>
+            </header>
+            <div class="meta texto-muted">
+              trecho #{{ hit.indiceTrecho + 1 }}
+              @if (hit.paginaInicio) {
+                · pág. {{ hit.paginaInicio }}@if (hit.paginaFim && hit.paginaFim !== hit.paginaInicio) {–{{ hit.paginaFim }} }
+              }
+              · {{ hit.documentoTipo }}
+            </div>
+            <p class="conteudo">{{ hit.conteudo }}</p>
+          </article>
+        }
+      </div>
+    }
+  }
+}
+
+@if (aba() === 'metadados') {
+  <div class="painel surface-card">
+    <form (ngSubmit)="listarMetadados()">
+      <div class="linha-acao">
+        <input pInputText [(ngModel)]="nome" name="nomeBusca" placeholder="Nome do documento…"
+               style="flex: 1" />
+        <p-select [(ngModel)]="filtroEstado" name="estadoBusca" [options]="estadosBusca"
+                  placeholder="Estado" (onChange)="listarMetadados()" />
+        <p-button label="Buscar" icon="pi pi-search" type="submit" [loading]="listaCarregando()" />
+      </div>
+    </form>
+  </div>
+
+  @if (documentos(); as pagina) {
+    @if (pagina.conteudo.length === 0) {
+      <p class="texto-muted vazio-docs">Nenhum documento para os filtros.</p>
+    } @else {
+      <ul class="docs-metadados">
+        @for (documento of pagina.conteudo; track documento.id) {
+          <li class="surface-card">
+            <i class="pi" [class]="documento.tipoArquivo === 'PDF' ? 'pi-file-pdf' : documento.tipoArquivo === 'DOCX' ? 'pi-file-word' : 'pi-file'"></i>
+            <div class="info">
+              <b>{{ documento.nomeOriginal }}</b>
+              <small class="texto-muted">{{ exibirBytes(documento.tamanhoBytes) }} · {{ exibirData(documento.dataUpload) }}</small>
+            </div>
+            <p-tag [value]="documento.estado"
+                   [severity]="documento.estado === 'CONCLUIDO' ? 'success' : documento.estado === 'FALHOU' ? 'danger' : documento.estado === 'PROCESSANDO' ? 'warn' : 'info'" />
+            <p-button icon="pi pi-external-link" severity="secondary" size="small" text
+                      (onClick)="abrirDocumento(documento.id)" pTooltip="Abrir documentos" />
+          </li>
+        }
+      </ul>
+    }
+  }
+}
+
+<!-- Trecho aberto -->
+<p-dialog header="Trecho encontrado" [(visible)]="dialogCitacao" [modal]="true" [style]="{ width: '620px' }">
+  @if (citacaoAberta(); as hit) {
+    <div class="citacao-aberta">
+      <div class="cabeca">
+        <b>{{ hit.documentoNome }}</b>
+        <span class="score" [class]="classificacao(hit)">{{ similaridade(hit) }}</span>
+      </div>
+      <div class="infos texto-muted">
+        trecho #{{ hit.indiceTrecho + 1 }}
+        @if (hit.paginaInicio) {
+          · pág. {{ hit.paginaInicio }}@if (hit.paginaFim && hit.paginaFim !== hit.paginaInicio) {–{{ hit.paginaFim }} }
+        }
+      </div>
+      <blockquote class="trecho">{{ hit.conteudo }}</blockquote>
+      <footer>
+        <p-button label="Abrir documento" icon="pi pi-external-link" size="small"
+                  severity="contrast" (onClick)="abrirDocumento(hit.documentoId)" />
+      </footer>
+    </div>
+  }
+</p-dialog>
+
+<p-toast position="top-right" />
