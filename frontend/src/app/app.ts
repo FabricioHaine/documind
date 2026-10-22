@@ -4,7 +4,8 @@ import { Toast } from 'primeng/toast';
 
 /**
  * Shell mínimo: aplica o tema dark no documento e hospeda o router +
- * o Toast global (o serviço de mensagens é injetado nas páginas).
+ * o Toast global (MessageService/ConfirmationService vem do injector raiz,
+ * providos em app.config.ts).
  */
 @Component({
   imports: [RouterOutlet, Toast],

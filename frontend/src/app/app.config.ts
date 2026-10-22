@@ -2,6 +2,7 @@ import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZonelessC
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 import { providePrimeNG } from 'primeng/config';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import Aura from '@primeuix/themes/aura';
 import { routes } from './app.routes';
 import { authInterceptor } from './core/http.interceptor';
@@ -18,5 +19,9 @@ export const appConfig: ApplicationConfig = {
       // Tema dark fixo: o produto é dark-only (design premium do portfólio).
       theme: { preset: Aura, options: { darkModeSelector: '.app-dark' } },
     }),
+    // O <p-toast> no template raiz (app.html) injeta MessageService pelo injector
+    // raiz — sem estes providers o app aborta com NG0201 na primeira carga.
+    MessageService,
+    ConfirmationService,
   ],
 };
