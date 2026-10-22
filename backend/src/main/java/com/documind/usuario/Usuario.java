@@ -12,7 +12,7 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 
 /**
- * Usuario da plataforma. A senha e armazenada ONLY como hash BCrypt —
+ * Usuario da plataforma. A senha e armazenada APENAS como hash BCrypt —
  * nunca sera retornada por qualquer endpoint da API.
  */
 @Entity

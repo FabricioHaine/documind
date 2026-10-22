@@ -17,7 +17,9 @@ import java.util.Date;
 import java.util.Optional;
 
 /**
- * Emisso e validacao de tokens JWT (HS256).
+ * Emisso e validacao de tokens JWT (HMAC-SHA2). O algoritmo exato e
+ * escolhido pelo jjwt conforme o tamanho do segredo: >= 32 caracteres
+ * garante no minimo HS256; com segredos longos (ex.: 64 chars) resulta HS512.
  *
  * O segredo vem exclusivamente da variavel de ambiente DOCUMIND_JWT_SECRET.
  * Se estiver ausente ou curta demais, a aplicacao NAO inicia (fail fast),

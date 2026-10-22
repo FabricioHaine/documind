@@ -1,481 +1,826 @@
-# DocuMind — Plataforma de Inteligência de Documentos (RAG)
+<div align="center">
 
-> Pergunte aos seus documentos. Respostas com fontes verificáveis — busca vetorial real (pgvector),
-> embeddings reais e citações construídas pelo back-end, nunca pelo modelo.
+# DocuMind
 
-**DocuMind** é uma aplicação full-stack de **RAG (Retrieval-Augmented Generation)** com autenticação
-própria, upload de PDF/DOCX/TXT, processamento assíncrono com embeddings, chat por documentos (ou
-por coleções), referências clicáveis com página/trecho de origem, busca semântica entre trechos e
-isolamento total de dados por usuário.
+**Plataforma de Inteligência de Documentos com RAG — pergunte aos seus documentos e receba respostas com fontes verificáveis.**
 
-O projeto foi construído como **portfólio profissional**, com foco em: pipeline RAG honesto,
-arquitetura em camadas com regras de negócio nos serviços, segurança aplicada ao SQL (não ao prom
--zA), operação explícita de falhas e qualidade automatizada.
+[![Java](https://img.shields.io/badge/Java-21-007396?logo=openjdk&logoColor=white)](https://openjdk.org/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Angular](https://img.shields.io/badge/Angular-22-DD0031?logo=angular&logoColor=white)](https://angular.dev/)
+[![PrimeNG](https://img.shields.io/badge/PrimeNG-22-0F172A?logo=primeng&logoColor=white)](https://primeng.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18%20%2B%20pgvector-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Ollama](https://img.shields.io/badge/Ollama-LLM%20local-1B1710?logo=ollama&logoColor=white)](https://ollama.com/)
+[![License: MIT](https://img.shields.io/badge/Licen%C3%A7a-MIT-FBBF24)](LICENSE)
+
+</div>
+
+---
+
+> **RAG de verdade, não de fachada.** Busca vetorial real com **pgvector + índice HNSW**, embeddings
+> reais do `nomic-embed-text`, **citações construídas pelo back-end** a partir dos trechos
+> efetivamente recuperados — e, quando não há evidência acima do limiar de similaridade, o sistema
+> responde honestamente *"não encontrei evidência nos documentos"* em vez de deixar o modelo
+> inventar.
+
+**DocuMind** é uma aplicação full-stack de **RAG (Retrieval-Augmented Generation)** construída como
+portfólio profissional, com:
+
+- autenticação própria (JWT + BCrypt) e **isolamento total de dados por usuário no SQL**;
+- upload de **PDF / DOCX / TXT** (até 25 MB, validação por *magic bytes*);
+- **processamento assíncrono** com ciclo de vida explícito e retries;
+- **chat com documentos** (individual, por coleção ou acervo completo) com respostas referenciadas;
+- **busca semântica** entre trechos por similaridade de cosseno;
+- política de falhas e honestidade de IA aplicada de ponta a ponta (§13);
+- front-end dark premium em **Angular 22 standalone + PrimeNG**, com tokens de design em SCSS.
+
+Tudo funciona **100% local** com Ollama — nenhum dado sai da máquina; e o cliente de IA fala o
+contrato **OpenAI-compatible**, então qualquer provedor compatível (vLLM, OpenRouter, LM Studio,
+Azure OpenAI, OpenAI "real") é uma troca de variável de ambiente.
 
 ---
 
 ## Índice
 
-1. [Visão geral](#1-visão-geral)
-2. [Arquitetura](#2-arquitetura)
-3. [Stack técnica](#3-stack-técnica)
-4. [Funcionalidades](#4-funcionalidades)
-5. [O pipeline RAG em detalhe](#5-o-pipeline-rag-em-detalhe)
-6. [Modelo de dados](#6-modelo-de-dados)
-7. [Pré-requisitos](#7-pré-requisitos)
-8. [Instalação e execução](#8-instalação-e-execução)
-9. [Variáveis de ambiente](#9-variáveis-de-ambiente)
-10. [Referência da API](#10-referência-da-api)
-11. [Segurança](#11-segurança)
-12. [Política de falhas e honestidade da IA](#12-política-de-falhas-e-honestidade-da-ia)
-13. [Exclusão, retenção e reprocessamento](#13-exclusão-retenção-e-reprocessamento)
-14. [Testes](#14-testes)
-15. [Estrutura do repositório](#15-estrutura-do-repositório)
-16. [Decisões técnicas](#16-decisões-técnicas)
-17. [Limitações conhecidas](#17-limitações-known)
-18. [Roadmap](#18-roadmap)
-19. [Solução de problemas](#19-solução-de-problemas)
-20. [Licença](#20-licença)
+1. [Demonstração em 60 segundos](#1-demonstração-em-60-segundos)
+2. [Visão geral do produto](#2-visão-geral-do-produto)
+3. [Arquitetura](#3-arquitetura)
+4. [Stack técnica](#4-stack-técnica)
+5. [Funcionalidades](#5-funcionalidades)
+6. [O pipeline RAG em detalhe](#6-o-pipeline-rag-em-detalhe)
+7. [Modelo de dados](#7-modelo-de-dados)
+8. [Pré-requisitos](#8-pré-requisitos)
+9. [Instalação e execução](#9-instalação-e-execução)
+10. [Variáveis de ambiente](#10-variáveis-de-ambiente)
+11. [Referência da API](#11-referência-da-api)
+12. [Segurança](#12-segurança)
+13. [Honestidade da IA e política de falhas](#13-honestidade-da-ia-e-política-de-falhas)
+14. [Exclusão, retenção e reprocessamento](#14-exclusão-retenção-e-reprocessamento)
+15. [Desempenho e operação](#15-desempenho-e-operação)
+16. [Testes](#16-testes)
+17. [Estrutura do repositório](#17-estrutura-do-repositório)
+18. [Decisões técnicas](#18-decisões-técnicas)
+19. [Limitações conhecidas](#19-limitações-conhecidas)
+20. [Roadmap](#20-roadmap)
+21. [Solução de problemas](#21-solução-de-problemas)
+22. [Licença e créditos](#22-licença-e-créditos)
 
 ---
 
-## 1. Visão geral
+## 1. Demonstração em 60 segundos
 
-Fluxo do produto:
+Depois de instalado (§9), o caminho mais curto para ver tudo funcionando:
 
-1. O usuário **envia documentos** (PDF/DOCX/TXT, até 25 MB cada, com verificação de *magic bytes*).
-2. O texto é **extraído, dividido em trechos** (com overlap) e **gerados embeddings reais** através
-   de um provedor compatível com a API OpenAI (por padrão, **Ollama local**).
-3. Cada trecho + embedding é persistido no **PostgreSQL 18 com pgvector**.
-4. No chat, a pergunta do usuário vira um embedding e a **busca vetorial** (cosine) — filtrando
-   **por usuário e pelo escopo (coleção opcional)** — recupera os trechos mais relevantes.
-5. O prompt com contexto numerado `[1..n]` é enviado ao modelo de chat, e a **resposta vem com
-   citações** cujos identificadores são construídos pelo **back-end** a partir dos trechos
-   REALMENTE recuperados. Se a recuperação não traz nada acima do limiar de relevância, o sistema
-   responde **explicitamente que não há evidência** — o modelo nunca é deixado adivinhar.
-6. Na interface, cada citação é clicável e leva ao trecho de origem (documento, página, índice).
+```text
+1. Abra http://localhost:4200 e crie sua conta (ou entre com um usuário de teste);
+2. Upload → selecione um PDF/DOCX/TXT (ex.: uma política interna, manual, contrato);
+3. Acompanhe o cartão do documento: Enviado → Aguardando → Processando → Concluído (n);
+4. Crie uma Coleção "Políticas internas" e vincule o documento;
+5. Conversas → Nova conversa com essa coleção → pergunte algo que EXISTE no documento:
+        "Quantos dias de férias o funcionário tem direito?"
+   → resposta com citações [1][2] clicáveis que abrem o documento na origem;
+6. Pergunte algo que NÃO existe nos documentos:
+        "Qual a política da empresa sobre financiamento imobiliário?"
+   → estado SEM_EVIDENCIA: o sistema responde que não foi encontrada evidência;
+   (verificação real: no documento de teste existe política de férias da empresa "Aurora",
+   sem temas de financiamento)
+7. Busca → modo Semântica: "venda de dias de férias" → trechos com similaridade 0.6–0.9.
+```
 
-**Importante**: sem IA configurada o sistema é honesto — sobe normalmente, mas endpoints de RAG
-respondem `503 IA_NAO_CONFIGURADA` com mensagem clara. Nunca há respostas simuladas, dados de
-exemplo "enganadores" nem fontes inventadas.
+O mesmo fluxo foi automatizado no smoke test E2E executado neste projeto (health, registro,
+upload, processamento, chat com citações, busca e teste de isolamento entre usuários — 10/10 verde,
+RAG respondendo `OK` com citação `[1]` fiel ao trecho original).
 
 ---
 
-## 2. Arquitetura
+## 2. Visão geral do produto
+
+Fluxo completo, do arquivo à resposta referenciada:
+
+1. O usuário **envia documentos** (PDF/DOCX/TXT, até 25 MB cada), com vínculo opcional a uma coleção.
+2. Assincronamente, o texto é **extraído** (PDF página a página; DOCX/TXT sem noção de página),
+   **dividido em trechos** com overlap e **vira embeddings reais** via provedor OpenAI-compatible
+   (por padrão Ollama local).
+3. Trecho + embedding são persistidos no **PostgreSQL 18 com pgvector**, indexados por **HNSW**
+   (distância de cosseno).
+4. No chat, a pergunta vira embedding e a **busca vetorial** — sempre restringida por `usuario_id`,
+   pelo escopo (coleção, quando houver) e pelo `modelo_embedding` configurado — recupera o top-K
+   de trechos mais relevantes acima do limiar.
+5. O back-end **monta o contexto numerado `[1..n]`** e envia ao modelo de chat com um prompt de
+   sistema endurecido. A **citação `[n]` só existe se o trecho `[n]` estava no contexto** —
+   as fontes são construídas pelo back-end, nunca pelo modelo.
+6. Se a recuperação não traz nada acima do limiar, o fluxo nem chama o modelo: responde
+   **`SEM_EVIDENCIA`** com texto honesto, persistido no histórico.
+7. Na UI, cada citação é clicável e leva ao documento + trecho/página de origem.
+
+**Sem IA configurada, o sistema é honesto:** sobe normalmente, mas os endpoints de RAG respondem
+`503 IA_NAO_CONFIGURADA` e o `/api/health` mostra `ia.configurado=false`. Nunca há respostas
+simuladas, dados de exemplo "enganadores" nem fontes inventadas.
+
+---
+
+## 3. Arquitetura
 
 ```
-┌────────────────────────┐     HTTPS/JSON      ┌─────────────────────────────┐
-│  Front-end (Angular 22)│  ─────────────────► │  Back-end (Java 21,         │
-│  PrimeNG, SCSS, tokens │  ◄───────────────── │  Spring Boot 3.5)           │
-│  premium (dark)        │   JWT Bearer        │  Controllers (sem regras)   │
-└────────────────────────┘                     │  ├─ Services (regras)       │
-                                               │  ├─ Services de IA (RAG)    │
-                                               │  ├─ Repositórios (JPA/SQL   │
-                                               │  │   nativo p/ vetores)     │
-                                               │  └─ Flyway (schema)         │
-                                               └────┬───────────────┬────────┘
-                                                    │               │
-                                          ┌─────────▼──────┐  ┌─────▼──────────────┐
-                                          │ PostgreSQL 18  │  │ Ollama (OpenAI-    │
-                                          │ + pgvector     │  │ compatible v1)     │
-                                          │ HNSW cosine    │  │ chat + embeddings  │
-                                          └────────────────┘  └────────────────────┘
+┌──────────────────────────────┐        HTTPS / JSON         ┌─────────────────────────────┐
+│  Front-end (Angular 22)      │ ──────────────────────────► │  Back-end (Spring Boot 3.5) │
+│  Angular standalone +        │ ◄────────────────────────── │  Java 21 (virtual threads)  │
+│  PrimeNG + SCSS dark         │        JWT Bearer           │                             │
+└──────────────────────────────┘                             │  Controllers (sem regras)   │
+                                                             │   ├─ Services (regras)      │
+                                                             │   ├─ Services de IA (RAG)   │
+                                                             │   ├─ Repositórios           │
+                                                             │   │   (JPA + SQL nativo     │
+                                                             │   │    para vetores)        │
+                                                             │   └─ Flyway (schema)        │
+                                                             └───────┬──────────────┬──────┘
+                                                                     │              │
+                                                        ┌────────────▼─────┐  ┌─────▼──────────────┐
+                                                        │  PostgreSQL 18   │  │  Ollama (local)    │
+                                                        │  + pgvector 0.8  │  │  contrato OpenAI   │
+                                                        │  HNSW cosine     │  │  chat + embeddings │
+                                                        └──────────────────┘  └────────────────────┘
 ```
 
-Camadas do back-end (`com.documind`):
+### Camadas do back-end (`com.documind`)
 
 | Pacote | Responsabilidade |
 |---|---|
-| `config` | Propriedades tipadas (`AppProperties`, `AiProperties`), Security/CORS, Async, OpenAPI |
-| `common` | Exceção hierarchy + `ApiError` consistente + `GlobalExceptionHandler` + `PageResponse` |
-| `security` | `JwtService`, filtros de autenticação e rate limit, `AuthFacade` (identidade na thread) |
-| `usuario` | Registro/login/me (BCrypt, e-mail único) |
-| `documento` | Upload/validação/armazenamento, extração (PDFBox/POI), chunking, listagem/detalhe/download/reprocess/exclusão |
-| `processamento` | Fila assíncrona (tarefa + estados), pipeline extração→chunks→embeddings, cancelamento cooperativo, retry com agendamento |
-| `rag` | `VectorSearchRepository` (SQL nativo pgvector), cliente turn-compatible (embeddings/chat com retry), `RagService` (retrieval+geração), prompts endurecidos |
+| `config` | Propriedades tipadas (`AppProperties`, `AiProperties`), Security/CORS, Async, Agendamento, OpenAPI |
+| `common` | Hierarquia de exceções + `ApiError` consistente + `GlobalExceptionHandler` + `PageResponse` |
+| `security` | `JwtService`, filtros de autenticação e de rate limit, `AuthFacade` (identidade na thread) |
+| `usuario` | Registro / login / `me` (BCrypt, e-mail único) |
+| `documento` | Upload/validação/armazenamento, extração de texto (PDFBox/POI/TXT), chunking, listagem/detalhe/download/reprocess/exclusão |
+| `processamento` | Fila assíncrona em banco (tarefa + estados), pipeline extração→chunks→embeddings, cancelamento cooperativo, reenfileiramento de órfãos |
+| `rag` | `VectorSearchRepository` (SQL nativo pgvector), cliente OpenAI-compatible (embeddings/chat com retry), `RagService` (recuperação + geração), prompts endurecidos |
 | `colecao` | CRUD de coleções e vínculos com documentos (escopo de pesquisa do RAG) |
-| `conversa` | Conversas, mensagens, ções com snapshot, orquestração pergunta→RAG→resposta+citações |
+| `conversa` | Conversas, mensagens, citações com snapshot, orquestração pergunta → RAG → resposta + citações |
 | `busca` | `GET /api/search` (metadados) e `POST /api/search/semantic` (vetorial) |
 | `health` | `GET /api/health` com estado real do banco e da configuração de IA |
 
-**Controllers não contêm regra de negócio** — apenas HTTP, validação de entrada e delegação.
-**DTOs em tudo na superfície HTTP** — entidades JPA nunca são serializadas.
+Princípios estruturais aplicados de forma consistente:
+
+- **Controllers não contêm regra de negócio** — apenas HTTP, validação de entrada e delegação.
+- **DTOs apenas na superfície HTTP** — entidades JPA nunca são serializadas.
+- **Regras nos serviços** — estados transicionais, permissões, limiares e orquestração vivem em
+  classes de domínio testáveis.
+- **Identidade sempre do contexto de segurança** — nenhuma rota aceita `usuarioId` do cliente.
+
+### Front-end (Angular 22 standalone)
+
+- Páginas: Login · Registro · Layout com navegação · Documentos (upload, filtros, polling,
+  detalhe, download, reprocess, exclusão) · Coleções · Conversas · Chat (conversa detalhada com
+  citações clicáveis → rota `/documentos?doc=<id>` que abre o painel de origem) · Busca
+  (metadados + semântica).
+- Comunicação central em `core/documind-api.service.ts`; **interceptor funcional** injeta o JWT e
+  normaliza erros da API (`extrairApiError`).
+- Guards de rota por autenticação; polling de estados transitórios apenas quando há documento
+  em andamento (economia de requests).
+- Tema dark com tokens de design definidos uma única vez (`styles.scss`): fundo `#0B0F14`,
+  superfícies `#11161D` / `#1A212B`, borda `#232C38`, texto `#E6EDF3`/`#8B98A9`, acento teal
+  `#2DD4BF`, perigo `#F87171`, aviso `#FBBF24`, sucesso `#34D399`; tipografia Inter.
 
 ---
 
-## 3. Stack técnica
+## 4. Stack técnica
 
 | Camada | Tecnologia | Versão |
 |---|---|---|
-| Back-end | Java + Spring Boot | 21 / 3.5.16 |
+| Back-end | Java + Spring Boot (virtual threads habilitados) | 21 / 3.5.16 |
 | Build | Maven (wrapper incluído) | 3.9.11 |
-| Segurança | Spring Security + JJWT | 0.13.0 |
+| Segurança | Spring Security + JJWT (HMAC-SHA2, ≥ HS256) | 6.5 / 0.13.0 |
 | Banco | PostgreSQL + pgvector | 18 / 0.8.7 |
 | Migrações | Flyway (`V1__documind_schema.sql`) | — |
 | Busca vetorial | pgvector HNSW (`vector_cosine_ops`) | — |
 | Extração PDF | Apache PDFBox | 3.0.8 |
 | Extração DOCX | Apache POI | 5.4.1 |
-| API docs | springdoc-openapi | 2.8.17 |
-| Testes | JUnit 5 + Mockito + AssertJ | — |
-| Front-end | Angular (standalone) | 22.2.3 |
+| API docs | springdoc-openapi (Swagger UI) | 2.8.17 |
+| Testes back | JUnit 5 + AssertJ | — |
+| Front-end | Angular (standalone, sem NgModules) | 22.2.0 |
 | UI Kit | PrimeNG + PrimeIcons | 22.1.4 / 8.0.2 |
-| Tipografia | Inter (@fontsource/inter) | 5.3.0 |
+| Tipografia | Inter (`@fontsource/inter`) | 5.3.0 |
 | IA (padrão) | Ollama local | `llama3.2:3b` + `nomic-embed-text` (768 dims) |
 
 O cliente de IA usa o contrato **OpenAI-compatible** (`/v1/embeddings`, `/v1/chat/completions`), então
-funciona com Ollama, vLLM, OpenRouter, LM Studio etc. — **nenhum modelo está fixado no código**.
+funciona com **Ollama, vLLM, OpenRouter, LM Studio, Azure OpenAI etc.** — **nenhum modelo fica fixado
+no código**: tudo vem de variáveis de ambiente (§10).
 
 ---
 
-## 4. Funcionalidades
+## 5. Funcionalidades
 
 ### Conta
-- Registro com e-mail único e senha forte (BCrypt); login JWT (HS256, expiração configurável);
-  `GET /api/auth/me` para o perfil.
+- Registro com e-mail único e senha com mínimos de segurança (BCrypt).
+- Login com emissão de JWT (HMAC-SHA2, expiração configurável) + tipo Bearer + prazo.
+- `GET /api/auth/me` para identidade do usuário autenticado (fonte de verdade do perfil na UI).
 
 ### Documentos
-- Upload **múltiplo** com vínculo opcional a uma coleção.
-- Validação por **assinatura binária** (magic bytes) — o `content-type` do cliente não é confiável;
-  mime é reconstruído no servidor; nomes sanitizados (caminhos/controles removidos).
-- Estados de ciclo de vida: `ENVIADO → AGUARDANDO_PROCESSAMENTO → PROCESSANDO → CONCLUIDO` (ou
-  `FALHOU` com mensagem legível). **Polling** de status por documento.
-- Listagem com filtros (nome, tipo, estado, data de envio, coleção), ordenação e paginação.
-- Detalhe com metadados completos (trechos totais, tarefa, tentativas e último erro).
-- Download do arquivo original; reprocessamento; exclusão consistente (§13).
+- Upload **múltiplo** (mesma tela) com vínculo opcional a uma coleção existente.
+- Validação por **assinatura binária (magic bytes)** — o `content-type` alegado pelo cliente não é
+  confiável; o MIME real é reconstruído no servidor; nomes de arquivo sanitizados.
+- Ciclo de vida explícito: `ENVIADO → AGUARDANDO_PROCESSAMENTO → PROCESSANDO → CONCLUIDO`
+  (ou `FALHOU` com mensagem legível para o usuário). Consulta de status por documento
+  (`GET /{id}/status`) com **polling** controlado pela UI.
+- Listagem com filtros combinados (nome, tipo, estado, coleção, data), paginação estável.
+- Detalhe com metadados completos (quantidade de trechos, modelo de embedding usado, tarefa de
+  processamento, tentativas e último erro).
+- Download do original (stream autenticado, dono validado antes de abrir o arquivo).
+- Reprocessamento (nova tarefa em fila) e exclusão consistente (§14).
 
 ### Coleções (escopo de RAG)
-- CRUD + adicionar/remover documentos. **Excluir coleção NÃO exclui documentos** (decisão
-  documentada); conversas com escopo nessa coleção passam a buscar em todo o acervo.
+- CRUD + vínculo/desvínculo de documentos.
+- Definição de produto, documentada: **excluir a coleção NÃO exclui os documentos** — só o
+  container some; conversas com esse escopo passam a buscar no acervo completo (FK `SET NULL`).
 
-### Conversas (chat com documentos)
-- Histórico persistido; renomear; escopo opcional por coleção.
-- **Resposta com citações** `[1..n]`: cada fonte referencia documento + trecho + página + conteúdo.
-- Mensagens marcadas com estado `OK`, `SEM_EVIDENCIA` ou `ERRO` — o histórico é honesto.
+### Conversas (chat com os documentos)
+- Histórico persistido (usuário + assistente), renomear, escopo opcional por coleção.
+- **Resposta com citações `[1..n]`**: cada citação referencia documento, trecho, página e o
+  **conteúdo do trecho na época** (snapshot).
+- Mensagens de assistente carregam estado honesto: `OK`, `SEM_EVIDENCIA` ou `ERRO` — a UI exibe
+  cada estado sem "adivinhar".
 
 ### Pesquisa
-- `GET /api/search`: metadados (mesma engine de filtros da listagem).
-- `POST /api/search/semantic`: trechos por **similaridade semântica** (só exige embeddings
-  configurados), com isolamento por usuário/coleção.
+- `GET /api/search`: pesquisa por metadados (mesma engine de filtros da listagem de documentos).
+- `POST /api/search/semantic`: pesquisa semântica de trechos por similaridade, exigindo apenas
+  embeddings configurados (chat não é necessário), com isolamento por usuário e escopo.
 
 ### Operação
-- `GET /api/health` público com diagnóstico real de banco e configuração de IA.
-- Swagger UI em `/swagger-ui.html`.
+- `GET /api/health`: público, diagnóstico real de banco (`UP/DOWN`) e IA (base URL, modelos,
+  dimensões, flags de configuração).
+- Swagger UI em `/swagger-ui.html` para exploração interativa da API.
 
 ---
 
-## 5. O pipeline RAG em detalhe
+## 6. O pipeline RAG em detalhe
 
 ```
-upload ──► extração (PDF: página-a-página; DOCX/TXT: sem páginas)
-       ──► chunking (1200 chars, overlap 200, respeita linhas/parágrafos)
-       ──► embeddings (em lotes, modelo p.ex. nomic-embed-text, 768 dims)
-       ──► upsert pgvector (metadados JSON: caracteres/unidades + modelo_embedding) + índice HNSW
+UPLOAD
+  ──► extração de texto  (PDF: página a página; DOCX/TXT: contínuo, sem páginas)
+  ──► chunking           (1200 chars por trecho, overlap 200, corte respeitando frases/linhas)
+  ──► embeddings         (lotes de 16; nomic-embed-text → 768 dimensões)
+  ──► persistência       (pgvector; metadados: página(s), índice, modelo_embedding; índice HNSW)
 
-pergunta ──► embedding da pergunta
-         ──► busca cosseno HNSW APENAS: usuario_id = X, (colecao opcional), modelo_embedding = modelo configurado
-         ──► limiar de relevância (0.35 default) e top-K (6 trechos)
-         ──► contexto numerado [1..n] (atribuido pelo BACKEND)
-         ──► prompt do sistema anti-injection (texto do documento = DADO, nunca instrução)
-         ──► resposta com [n] nas afirmações
-         ──► persistência: mensagem + citações (SNAPSHOT de trecho/página)
+PERGUNTA
+  ──► embedding da pergunta (mesmo modelo configurado)
+  ──► busca cosseno HNSW com predicados do SQL:
+        usuario_id = X  ·  (colecao_id IN escopo opcional)  ·  modelo_embedding = modelo atual
+  ──► filtro de limiar   (similaridade >= 0.35 default) e top-K (6 trechos default)
+  ──► contexto numerado [1..n]   (a numeração é atribuída PELO BACKEND)
+  ──► prompt de sistema endurecido (ver abaixo) + histórico da conversa
+  ──► resposta do modelo com referências [n]
+  ──► persistência: mensagem + citações com SNAPSHOT do trecho (conteúdo + página + índice)
+
+SEM EVIDÊNCIA
+  ──► recuperação vazia/abaixo do limiar ⇒ NÃO chama o modelo de chat
+      ⇒ resposta fixa honesta, mensagem persistida com estado SEM_EVIDENCIA
 ```
 
-Detalhes de engenharia que sustentam a corretude:
+Engenharia que sustenta a corretude do RAG:
 
-- **Isolamento no SQL, não no prompt**: a query vetorial inclui `usuario_id` e escopo de coleção
-  como predicados — o modelo não pode "ver" documentos de outros usuários.
-- **Espaço de embeddings por modelo**: busca sempre filtra `modelo_embedding` = modelo configurado;
-  não mistura espaços de modelos diferentes.
-- **Decisão de sem-evidência é do backend**: recuperação vazia ⇒ resposta fixa honesta e mensagem
-  persistida como `SEM_EVIDENCIA`, sem gastar chamada de chat.
-- **Prompt injection**: instruções dentro de documentos são tratadas como dados no prompt do sistema.
-- **Dimensão fixa no schema**: `embedding vector(768)` — a dimensão é validada a cada lote no cliente
-  (rejeita resposta fora da dimensão esperada) e uma migração é exigida para trocar de modelo/novo tamanho.
+- **Isolamento no SQL, não no prompt.** Todo predicado de segurança (`usuario_id`, escopo de
+  coleção) é cláusula de WHERE na query vetorial — o modelo não pode "ver" dados de outros
+  usuários nem "esquecer" o escopo.
+- **Espaço de embeddings por modelo.** A busca filtra sempre pelo `modelo_embedding` configurado:
+  vetores de modelos diferentes nunca são comparados entre si.
+- **Numeração e citação nascem no backend.** O modelo só referencia `[n]` presente no contexto;
+  as fontes devolvidas pela API derivam daqueles trechos concretos (documento, página, índice).
+- **Prompt injection é tratado como dado.** Texto recuperado entra no prompt como material citável,
+  não como instrução; o modelo é instruído a ignorar comandos contidos em documentos.
+- **Resposta fixa de `SEM_EVIDENCIA` é decisão do backend**, determinística e testável.
+- **Dimensão travada no schema** (`embedding vector(768)`): pgvector exige typmod para criar o
+  índice HNSW; o cliente valida a dimensão de cada lote recebido e um novo modelo de embeddings
+  passa por migração explícita (§18, decisão 2).
 
 ---
 
-## 6. Modelo de dados
+## 7. Modelo de dados
 
-Principal (resumo — ver `V1__documind_schema.sql`):
+Schema gerido **exclusivamente** por migrações Flyway (`V1__documind_schema.sql`). Resumo:
 
-| Tabela | Papel | Notas |
+| Tabela | Papel | Notas de integridade |
 |---|---|---|
-| `usuario` | conta | e-mail único; senha BCrypt |
-| `documento` | arquivo do usuário | nome original/armazenado, mime REAL, tamanho, `estado`, erro, modelo de embedding, totais reais |
-| `trecho_documento` | chunk + vetor | `embedding vector(768)`, `modelo_embedding`, índice, páginas; FK `ON DELETE CASCADE` p/ documento; índice **HNSW cosine** |
-| `tarefa_processamento` | fila/retries | estados da tarefa, tentativas, último erro |
+| `usuario` | conta | e-mail único; senha hash BCrypt |
+| `documento` | arquivo do usuário | nome original/armazenado, MIME real, tamanho, `estado`, mensagem de erro, modelo de embedding, contadores reais |
+| `trecho_documento` | chunk + vetor | `embedding vector(768)`, `modelo_embedding`, índice do trecho, página(s); FK `ON DELETE CASCADE` → documento; índice **HNSW cosine** |
+| `tarefa_processamento` | fila + retries | estados da tarefa, tentativas, último erro; reenfileiramento de órfãos no boot |
 | `colecao` | escopo | nome único por usuário |
-| `documento_colecao` | vínculo N:N | FK duplo CASCADE |
-| `conversa` | chat | FK coleção **SET NULL** (perde escopo, não o histórico) |
-| `mensagem` | USUARIO/ASSISTENTE... | `estado` (OK/SEM_EVIDENCIA/ERRO), `metadados` TEXT (JSON seguro: modelo, tokens, latência, trechos no contexto) |
-| `citacao` | fonte da resposta | FK documento **CASCADE**; FK trecho **SET NULL** (snapshot de conteúdo/páginas é preservado) |
+| `documento_colecao` | vínculo N:N | FK dupla `ON DELETE CASCADE` |
+| `conversa` | chat | FK coleção **SET NULL** (perde o escopo, preserva o histórico) |
+| `mensagem` | USUARIO / ASSISTENTE | `estado` (`OK` / `SEM_EVIDENCIA` / `ERRO`); `metadados` JSON (modelo, tokens, latência, trechos no contexto) |
+| `citacao` | fonte da resposta | FK documento `CASCADE`; FK trecho **SET NULL** + snapshot de conteúdo/página preservado na própria linha |
+
+> A dimensão 768 acompanha o modelo padrão `nomic-embed-text`; trocar de modelo de embeddings é
+> decisão deliberada, acompanhada de migração (§6, §18).
+
+Relações relevantes para operação e auditoria:
+
+```
+usuario 1─N documento 1─N trecho_documento
+                    │            ▲
+                    └─N─documento_colecao─N─┐ (colecao)
+conversa N─1 (colecao, SET NULL)
+conversa 1─N mensagem 1─N citacao N─1 documento (CASCADE) / N─1 trecho_documento (SET NULL)
+documento 1─N tarefa_processamento
+```
 
 ---
 
-## 7. Pré-requisitos
+## 8. Pré-requisitos
 
-1. **PostgreSQL 18 + pgvector 0.8.7** — no Windows, use `scripts/install-pgvector.ps1`
-   (executar como administrador; copia os binários da extensão para a instalação do PostgreSQL).
+1. **PostgreSQL 18 + pgvector 0.8.7**
+   - No Windows, `scripts/install-pgvector.ps1` (como administrador) instala a extensão na
+     instalação existente do PostgreSQL.
+   - O script `scripts/setup-database.ps1` (§9) cria o role/database e habilita `CREATE EXTENSION vector`.
+
 2. **Ollama + modelos** (provedor de IA padrão, executado localmente):
 
    ```powershell
    winget install Ollama.Ollama
-   ollama pull llama3.2:3b        # modelo de chat (bom equilíbrio qualidade/latência local)
+   ollama pull llama3.2:3b        # modelo de chat (melhor equilíbrio qualidade/latência local)
    ollama pull nomic-embed-text   # modelo de embeddings (768 dims)
    ```
 
-   > Em máquinas com GPU capaz de rodar o `llama3.1:8b` 100% na VRAM, use-o como
-   > `DOCUMIND_AI_CHAT_MODEL` — respostas de melhor qualidade. Em máquinas onde o 8B
-   > fica parcialmente em CPU (ver `ollama ps`), o `llama3.2:3b` evita latências de
-   > dezenas de segundos por resposta. O modelo nunca é fixo no código.
+   > **Escolha do modelo de chat pelo hardware** (medido em máquina com GPU modesta, split
+   > CPU/GPU): o `llama3.1:8b` gerava ~2,4 tokens/s com latência de minutos por resposta RAG;
+   > o `llama3.2:3b` reduziu a mesma resposta para ~45 s com qualidade igual para o caso de uso
+   > (respostas extrativas com citações). Verificar o posicionamento com `ollama ps`: modelos que
+   > ficam 100% na VRAM são os únicos candidatos a 8B+. O modelo é configurável por ambiente —
+   > nunca fixo no código.
 
-3. **JDK 21+** (build usa `--release 21`) e **Node.js 20+**.
-4. Qualquer provedor **OpenAI-compatible** pode substituir o Ollama (vLLM, LM Studio, OpenRouter) —
-   só mudar as variáveis `DOCUMIND_AI_*`.
+3. **JDK 21+** (o build compila com `--release 21`; qualquer JDK ≥ 21 serve) e **Node.js 20+**.
+
+4. Opcional: qualquer provedor **OpenAI-compatible** (OpenAI, vLLM, OpenRouter, LM Studio...)
+   pode substituir o Ollama — basta apontar `DOCUMIND_AI_BASE_URL` e definir os modelos desejados.
 
 ---
 
-## 8. Instalação e execução
+## 9. Instalação e execução
+
+### 9.1 Banco + `.env` local (Windows)
 
 ```powershell
-# 1. Obtenha o código (já na raiz do projeto)
-git clone <repo> documind; cd documind   # ou use a pasta já criada
-
-# 2. Banco + .env local (interativo: pede senha do postgres e do app)
+# Na raiz do projeto:
 powershell -ExecutionPolicy Bypass -File scripts/setup-database.ps1
-
-# 3. Backend (carrega backend/.env automaticamente, aplica Flyway e sobe na :8080)
-.\run-backend.ps1
-#    Swagger: http://localhost:8080/swagger-ui.html
-#    Health:  http://localhost:8080/api/health
-
-# 4. Front-end
-cd frontend
-npm install
-npm start           # http://localhost:4200
 ```
 
-Testes unitários: `cd backend; .\mvnw.cmd test`.
-Testes contra banco real: `$env:DOCUMIND_IT="true"; .\mvnw.cmd test` (exige PostgreSQL preparado).
+O script interativo:
+
+1. pede a senha do superusuário `postgres` e a senha desejada para o novo usuário da aplicação;
+2. cria (ou atualiza) o role `documind` e o database `documind` com o usuário como owner;
+3. habilita a extensão pgvector e garante permissões no schema;
+4. gera `backend/.env` local (**nunca versionado**) com as credenciais e um **segredo JWT
+   aleatório** de 48 bytes (base64);
+5. valida ao final conectando com o usuário da aplicação (`CONEXAO_APP_OK`).
+
+### 9.2 Backend
+
+```powershell
+.\run-backend.ps1            # carrega backend/.env, aplica migrations e sobe em :8080
+```
+
+- Swagger: <http://localhost:8080/swagger-ui.html>
+- Health: <http://localhost:8080/api/health>
+- Guia sem script: `cd backend` e usar `mvnw.cmd spring-boot:run` com as variáveis do §10 exportadas.
+
+### 9.3 Front-end
+
+```powershell
+cd frontend
+npm install
+npm start                    # http://localhost:4200
+```
+
+> **Porta 4200 ocupada?** (ex.: outro projeto Angular rodando) suba o DocuMind em outra porta:
+>
+> ```powershell
+> npx ng serve --port 4201
+> ```
+>
+> e autorize a nova origem no backend: `DOCUMIND_CORS_ORIGINS=http://localhost:4200,http://localhost:4201`
+> (o `.env` já aceita lista separada por vírgula).
+
+### 9.4 Testes rápidos pós-instalação
+
+```bash
+curl http://localhost:8080/api/health          # {"banco":{"estado":"UP"}, "ia":{"configurado":true,...}}
+```
+
+Testes unitários do backend: `cd backend; .\mvnw.cmd test`.
+Testes de integração (banco real, gated): `$env:DOCUMIND_IT="true"; .\mvnw.cmd test`.
+Testes do front-end: `cd frontend; npx ng test`.
 
 ---
 
-## 9. Variáveis de ambiente
+## 10. Variáveis de ambiente
 
-Todas têm default funcional exceto as marcadas **(obrigatória)**. Veja `.env.example`.
+Todas têm default funcional exceto `DOCUMIND_JWT_SECRET` **(obrigatória)** e as de credencial do
+banco, definidas pelo setup. Referência completa em `.env.example`. Nenhum segredo é commitado —
+`.gitignore` cobre `.env`, `*.env` e `backend/storage/`.
+
+### Banco e servidor
 
 | Variável | Descrição | Default |
 |---|---|---|
-| `SPRING_DATASOURCE_URL` | JDBC do banco | `jdbc:postgresql://localhost:5432/documind` |
-| `SPRING_DATASOURCE_USERNAME` | usuário do banco | `documind` |
-| `SPRING_DATASOURCE_PASSWORD` | senha do banco — **(setup define)** | `documind` |
-| `DOCUMIND_JWT_SECRET` | segredo HS256 **(obrigatória, ≥ 32 chars)**; ausente/curta aborta o startup | — |
-| `DOCUMIND_AI_BASE_URL` | base **OpenAI-compatible** (ex.: `http://localhost:11434/v1`); vazio ⇒ IA desligada (503 claro) | vazio |
-| `DOCUMIND_AI_API_KEY` | token se o provedor pedir (Ollama local: vazio) | vazio |
+| `DOCUMIND_DB_URL` | JDBC do PostgreSQL | `jdbc:postgresql://localhost:5432/documind` |
+| `DOCUMIND_DB_USERNAME` | usuário do banco | `documind` |
+| `DOCUMIND_DB_PASSWORD` | senha do banco (definida no setup) | `documind` |
+| `DOCUMIND_JWT_SECRET` | segredo HMAC **(obrigatória, ≥ 32 chars)**; ausente/curta → aborta o startup com erro claro | — |
+| `DOCUMIND_JWT_EXP_MINUTES` | validade do token de acesso (min) | `120` |
+| `DOCUMIND_CORS_ORIGINS` | origens permitidas (separadas por vírgula) | `http://localhost:4200` |
+| `SERVER_PORT` / `server.port` | porta HTTP do backend | `8080` |
+
+> Compatibilidade: o `.env` também funciona com `SPRING_DATASOURCE_URL/USERNAME/PASSWORD` — as
+> variáveis `SPRING_*` do Spring têm precedência maior que o YAML, e as `DOCUMIND_DB_*` são
+> resolvidas dentro do YAML. Escolha um padrão e mantenha-o.
+
+### Documentos e limites
+
+| Variável | Descrição | Default |
+|---|---|---|
+| `DOCUMIND_DOCUMENT_MAX_SIZE_MB` | tamanho máximo por arquivo (também limita multipart) | `25` |
+| `DOCUMIND_DOCUMENT_UPLOADS_PER_HOUR` | limite de uploads por usuário/hora (excede → `429`) | `30` |
+| `DOCUMIND_DOCUMENT_STORAGE_PATH` | pasta de armazenamento dos originais | `./storage` |
+| `DOCUMIND_RATE_LIMIT_PER_MINUTE` | requisições por minuto por IP (rotas de IA: por usuário) | `60` |
+
+### Pipeline RAG (chunking)
+
+| Variável | Descrição | Default |
+|---|---|---|
+| `DOCUMIND_RAG_CHUNK_SIZE_CHARS` | tamanho alvo de cada trecho (chars) | `1200` |
+| `DOCUMIND_RAG_CHUNK_OVERLAP_CHARS` | sobreposição entre trechos consecutivos | `200` |
+
+### Integração de IA (OpenAI-compatible)
+
+| Variável | Descrição | Default |
+|---|---|---|
+| `DOCUMIND_AI_BASE_URL` | base do provedor (ex.: `http://localhost:11434/v1`); vazia ⇒ IA desativada (`503` claro) | vazio |
+| `DOCUMIND_AI_API_KEY` | Bearer quando o provedor exige (Ollama local: vazio) | vazio |
 | `DOCUMIND_AI_CHAT_MODEL` | modelo de chat (ex.: `llama3.2:3b`) | vazio |
 | `DOCUMIND_AI_EMBEDDING_MODEL` | modelo de embeddings (ex.: `nomic-embed-text`) | vazio |
-| `DOCUMIND_AI_EMBEDDING_DIMENSIONS` | dimensão esperada (validada no recebimento) | `768` |
-| `DOCUMIND_AI_MAX_CONTEXT_CHUNKS` | K trechos no contexto | `6` |
-| `DOCUMIND_AI_MIN_RELEVANCE_THRESHOLD` | limiar cosine mínimo para aceitar trecho | `0.35` |
-| `DOCUMIND_AI_REQUEST_TIMEOUT_SECONDS` | timeout por chamada | `120` |
-| `DOCUMIND_AI_MAX_RETRIES` | retries de chamada de IA | `2` |
-| `DOCUMIND_AI_EMBEDDING_BATCH_SIZE` | trechos por lote de embedding | `16` |
-| `DOCUMIND_AI_MAX_OUTPUT_TOKENS` | limite de saída do chat | `1024` |
-| `DOCUMIND_RAG_CHUNK_SIZE_CHARS` | tamanho de chunk | `1200` |
-| `DOCUMIND_RAG_CHUNK_OVERLAP_CHARS` | overlap | `200` |
-| `DOCUMIND_DOCUMENT_MAX_SIZE_MB` | tamanho máximo de cada arquivo | `25` |
-| `DOCUMIND_DOCUMENT_UPLOADS_PER_HOUR` | limite por usuário/hora | `30` |
-| `DOCUMIND_DOCUMENT_STORAGE_PATH` | onde os arquivos ficam | `./storage` |
-| `DOCUMIND_RATE_LIMIT_PER_MINUTE` | reqs/min por IP (rotas de IA: por usuário) | `60` |
-| `DOCUMIND_CORS_ORIGINS` | origens permitidas (dev front) | `http://localhost:4200` |
-| `DOCUMIND_JWT_EXP_MINUTES` | validade do token | `120` |
+| `DOCUMIND_AI_EMBEDDING_DIMENSIONS` | dimensão esperada; validada em cada lote recebido | `768` |
+| `DOCUMIND_AI_MAX_CONTEXT_CHUNKS` | K trechos que entram no contexto | `6` |
+| `DOCUMIND_AI_MIN_RELEVANCE_THRESHOLD` | similaridade mínima de cosseno para aceitar trecho (0..1) | `0.35` |
+| `DOCUMIND_AI_REQUEST_TIMEOUT_SECONDS` | timeout por chamada ao provedor | `120` |
+| `DOCUMIND_AI_MAX_RETRIES` | tentativas extras em falha temporária (timeout, 5xx) | `2` |
+| `DOCUMIND_AI_EMBEDDING_BATCH_SIZE` | trechos por chamada de embeddings | `16` |
+| `DOCUMIND_AI_MAX_OUTPUT_TOKENS` | teto de tokens de saída do chat | `1024` |
 
-**Nenhum segredo é commitado.** `.gitignore` cobre `.env`, `*.env` e `backend/storage/`.
+**Dica de hardware:** se o chat estourar o timeout (ver §21), aumente
+`DOCUMIND_AI_REQUEST_TIMEOUT_SECONDS` (local: `300`) ou migre o chat para um modelo menor — a
+config é pontual e isolada.
 
 ---
 
-## 10. Referência da API
+## 11. Referência da API
 
-Autenticação via header `Authorization: Bearer <JWT>` (exceto register/login/health/docs).
-
-### `POST /api/auth/register` | `POST /api/auth/login` | `GET /api/auth/me`
-
-### Documentos `/api/documents`
-| Método | Caminho | Descrição |
-|---|---|---|
-| POST | `/` | multipart `arquivos[]` (+`colecaoId` opcional) ⇒ 201 com metadados |
-| GET | `/` | filtros `nome,tipo,estado,colecaoId,data&page,size` |
-| GET | `/{id}` | detalhe completo |
-| GET | `/{id}/status` | polling de processamento |
-| GET | `/{id}/download` | stream do original |
-| POST | `/{id}/reprocess` | 202 reenfileira |
-| DELETE | `/{id}` | exclusão consistente (§13) |
-
-### Coleções `/api/collections`
-| POST `/` · GET `/` · GET `/{id}` · PUT `/{id}` · DELETE `/{id}` |
-| POST `/{id}/documents` `{ "documentoId": n }` · DELETE `/{id}/documents/{documentoId}` |
-
-### Conversas `/api/conversations`
-| POST `/` `{titulo?, colecaoId?}` · GET `/` · GET `/{id}` · PATCH `/{id}` · DELETE `/{id}` |
-| GET `/{id}/messages` histórico · POST `/{id}/messages` `{conteudo}` ⇒ resposta RAG + citações |
-
-### Pesquisa e saúde
-| GET `/api/search` metadados · POST `/api/search/semantic` `{pergunta, colecaoId?}` |
-| GET `/api/health` (público) |
-
-Códigos de erro padronizados:
+Autenticação por `Authorization: Bearer <JWT>` em todas as rotas, exceto
+`/api/auth/register`, `/api/auth/login`, `/api/health` e Swagger.
+Formato de erro padrão em toda a API:
 
 ```json
-{ "status": 403, "code": "ACESSO_NEGADO", "message": "Você não tem acesso a este documento." }
+{ "status": 403, "code": "ACESSO_NEGADO", "message": "Você não tem acesso a este documento.", "violations": [] }
 ```
 
-Formas usuais: `400 REQUISICAO_INVALIDA`, `400 ARQUIVO_INVALIDO`, `401 NAO_AUTORIZADO`,
-`403 ACESSO_NEGADO`, `404 NAO_ENCONTRADO`, `409 CONFLITO`, `429 LIMITE_EXCEDIDO`,
-`502 PROVEDOR_IA_INDISPONIVEL`, `503 IA_NAO_CONFIGURADA`. Stack traces nunca vazam (server.error.*=never).
+### 11.1 Autenticação — `/api/auth`
 
----
+| Método | Caminho | Corpo | Respostas |
+|---|---|---|---|
+| `POST` | `/register` | `{ "nome", "email", "senha" }` | `201` `TokenResponse`; `409 CONFLITO` se e-mail existir; `400 VALIDACAO` |
+| `POST` | `/login` | `{ "email", "senha" }` | `200` `TokenResponse`; `401 NAO_AUTORIZADO` para credenciais inválidas |
+| `GET` | `/me` | — (Bearer) | `200` usuário atual |
 
-## 11. Segurança
+`TokenResponse`:
 
-- **JWT HS256** com segredo obrigatório ≥ 32 chars (fail-fast no startup — nada de segredo default).
-- **Credenciais**: BCrypt (strength default do Spring Security); e-mail único no banco + validação.
-- **Autorização no back-end em cada consulta** via `AuthFacade`: o intermediário nunca envia
-  `usuarioId` — a identidade vem do contexto de segurança e os repositórios filtram por ela
-  (Specifications JPA e SQL nativo).
-- **Rate limiting**: fixed-window por IP (auth) e por usuário (rotas de IA). Excede ⇒ `429`.
-- **Upload seguro**: extensão em lista de permissões (`pdf/docx/txt`), verificação de *magic bytes* por tipo
-  (PNG/JPEG/executável mascarado como `.txt` → rejeitado), tamanho máximo antes da leitura completa.
-- **Armazenamento local**: nomes UUID dentro do path configurado; download valida o dono ANTES de abrir o stream.
-- **CORS** fechado por default (`http://localhost:4200` em dev) e headers de segurança do Spring Security.
+```json
+{
+  "token": "eyJhbGciOi...",
+  "tipo": "Bearer",
+  "expiraEm": "2026-10-22T21:48:34Z",
+  "usuario": { "id": 1, "nome": "Maria Silva", "email": "maria@empresa.com", "dataCriacao": "..." }
+}
+```
 
----
+### 11.2 Documentos — `/api/documents`
 
-## 12. Política de falhas e honestidade da IA
+| Método | Caminho | Descrição | Respostas |
+|---|---|---|---|
+| `POST` | `/` | multipart com campo `arquivos` (repetível) + `colecaoId` opcional | `201` lista de `DocumentoResponse` |
+| `GET` | `/` | filtros `nome`, `tipo`, `estado`, `colecaoId`, `data` + `page`/`size` | `200` `PageResponse<DocumentoResponse>` |
+| `GET` | `/{id}` | detalhe completo (trechos, tarefa, tentativas) | `200` / `404` |
+| `GET` | `/{id}/status` | polling do processamento: `estado`, `quantTrechos`, `mensagemErro` | `200` |
+| `GET` | `/{id}/download` | stream do arquivo original (dono validado antes de abrir) | `200` binário |
+| `POST` | `/{id}/reprocess` | reenfileira o processamento | `202` |
+| `DELETE` | `/{id}` | exclusão consistente (§14) | `204` |
 
-| Situação | Comportamento |
-|---|---|
-| IA não configurada (`DOCUMIND_AI_*` vazios) | app sobe; `503 IA_NAO_CONFIGURADA`; health mostra `ia.configurado=false` |
-| Provedor cai/timeout/limite | retry configurável ⇒ se persistir, mensagem do assistente persistida com estado `ERRO` + `502 PROVEDOR_IA_INDISPONIVEL` |
-| Recuperação vazia (nada acima do limiar) | resposta fixa honesta (sem chamada de chat) persistida como `SEM_EVIDENCIA` — e o front exibe como tal |
-| Erro inesperado no fluxo de resposta | detalhes logados no servidor; mensagem segura persistida como `ERRO` e `502` com texto genérico (sem stack p/ usuário) |
-| Embeddings fora da dimensão esperada | lote abortado, tarefa `FALHOU` com a mensagem no documento |
+Exemplo — enviar um documento e acompanhar:
 
-A pergunta do usuário é sempre persistida (mesmo em falha) — o histórico conversacional é fiel;
-nada de respostas "concluídas falsas".
+```bash
+curl -X POST http://localhost:8080/api/documents \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "arquivos=@politica-ferias.pdf"
 
----
+# → [ { "id": 7, "nomeOriginal": "politica-ferias.pdf", "estado": "AGUARDANDO_PROCESSAMENTO", ... } ]
 
-## 13. Exclusão, retenção e reprocessamento
+curl http://localhost:8080/api/documents/7/status -H "Authorization: Bearer $TOKEN"
+# → { "estado": "CONCLUIDO", "quantTrechos": 12, "mensagemErro": null }
+```
 
-- **Excluir documento**: cancelamento cooperativo do processamento (flag verificada por lote)
-  ⇒ delete com **FK CASCADE** (trechos + embeddings + tarefas + citações) ⇒ remoção do
-  arquivo no disco. **Não sobra trecho recuperável pelo RAG** — a cascata é atômica no banco.
-- **Excluir coleção**: só o container; documentos permanecem; conversas com escopo perdem a coleção (SET NULL).
-- **Excluir conversa**: mensagens + citações removidas em cascata.
-- **Reprocessar**: enfileira nova tarefa; citações antigas mantêm snapshot (FK trecho SET NULL),
-  então referências antigas continuam legíveis mesmo com trechos reindexados.
+### 11.3 Coleções — `/api/collections`
 
----
-
-## 14. Testes
-
-| Teste | Escopo | Como roda |
+| Método | Caminho | Descrição |
 |---|---|---|
-| `ChunkingServiceTest` | limites, overlap, páginas, normalização | `mvnw test` |
-| `DocumentoUploadValidatorTest` | magic bytes, extensão, sanitização | `mvnw test` |
-| `PromptTemplatesTest` | regras anti-injeção, numeração backend, escopo | `mvnw test` |
-| `JwtServiceTest` | fail-fast de segredo, roundtrip, expiração | `mvnw test` |
-| `DocumindIt` | banco real: extensão vector, 9 tabelas, dimensão 768 | `DOCUMIND_IT=true mvnw test` |
+| `POST` | `/` | cria coleção `{ "nome", "descricao?" }` (nome único por usuário; `409` em duplicidade) |
+| `GET` | `/` | lista as coleções do usuário |
+| `GET` | `/{id}` | detalhe + documentos vinculados |
+| `PUT` | `/{id}` | renomear/descrição |
+| `POST` | `/{id}/documents` | vincula `{ "documentoId": n }` |
+| `DELETE` | `/{id}/documents/{documentoId}` | desvincula (documento permanece) |
+| `DELETE` | `/{id}` | exclui o container — **documentos preservados** (§14) |
 
-O conjunto IT fica **gated** por `DOCUMIND_IT` para não pedir infra em toda execução local/pipeline.
+### 11.4 Conversas — `/api/conversations`
+
+| Método | Caminho | Descrição |
+|---|---|---|
+| `POST` | `/` | cria conversa `{ "titulo", "colecaoId?" }` (escopo opcional) |
+| `GET` | `/` | lista conversas do usuário |
+| `GET` | `/{id}` | resumo da conversa |
+| `PATCH` | `/{id}` | renomear `{ "titulo" }` |
+| `GET` | `/{id}/messages` | histórico (usuário + assistente + estado + citações) |
+| `POST` | `/{id}/messages` | **pergunta RAG** `{ "conteudo": "..." }` → resposta com citações |
+| `DELETE` | `/{id}` | exclui conversa + mensagens (em cascata) |
+
+Exemplo — a pergunta que define o produto:
+
+```bash
+curl -X POST http://localhost:8080/api/conversations/3/messages \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{ "conteudo": "Quantos dias de férias o funcionário tem direito e pode vender quantos?" }'
+```
+
+```json
+{
+  "estado": "OK",
+  "conteudo": "O funcionário tem direito a 30 dias de férias a cada 12 meses [1] e pode vender até 10 dias [2].",
+  "citacoes": [
+    {
+      "referencia": 1,
+      "documentoNome": "politica-ferias.pdf",
+      "paginaInicio": 1,
+      "indiceTrecho": 0,
+      "conteudoTrecho": "1. Período aquisitivo — O funcionário tem direito a 30 dias ..."
+    }
+  ],
+  "metadados": { "modelo": "llama3.2:3b", "trechosContexto": 12, "tokensEntrada": 554, "tokensSaida": 104 }
+}
+```
+
+### 11.5 Pesquisa — `/api/search` e `/api/health`
+
+| Método | Caminho | Descrição |
+|---|---|---|
+| `GET` | `/api/search` | pesquisa por **metadados**: `nome`, `tipo`, `estado`, `colecaoId`, `data`, `page`, `size` |
+| `POST` | `/api/search/semantic` | pesquisa **semântica**: `{ "pergunta", "colecaoId?" }` → trechos com `similaridade` (só exige embeddings) |
+| `GET` | `/api/health` | público; `banco.estado` (`UP`/`DOWN`) + `ia` (configurado? embeddings? base? modelos? dimensões) |
+
+```bash
+curl -X POST http://localhost:8080/api/search/semantic \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{ "pergunta": "venda de dias de férias", "colecaoId": 2 }'
+# → { "resultados": [ { "referencia": 1, "similaridade": 0.674, "documentoNome": "politica-ferias.pdf", "paginaInicio": 1, ... } ] }
+```
+
+### 11.6 Códigos de erro padronizados
+
+| HTTP | `code` | Quando |
+|---|---|---|
+| `400` | `VALIDACAO` | corpo/parâmetros inválidos (com `violations[]` por campo) |
+| `400` | `REQUISICAO_INVALIDA` | requisição malformada (ex.: nenhum arquivo no multipart) |
+| `400` | `ARQUIVO_INVALIDO` | conteúdo não corresponde ao tipo declarado / extensão não permitida |
+| `400` | `ARQUIVO_GRANDE` | acima do tamanho máximo |
+| `401` | `NAO_AUTORIZADO` | ausência/invalidade de credenciais |
+| `403` | `ACESSO_NEGADO` | recurso de outro usuário |
+| `404` | `NAO_ENCONTRADO` | recurso inexistente para o usuário |
+| `409` | `CONFLITO` | e-mail duplicado; nome de coleção duplicado |
+| `429` | `LIMITE_EXCEDIDO` | rate limit (por IP ou usuário) |
+| `502` | `PROVEDOR_IA_INDISPONIVEL` | provedor de IA falhou após retries |
+| `503` | `IA_NAO_CONFIGURADA` | pipeline de IA sem `DOCUMIND_AI_*` |
+| `500` | `ERRO_INTERNO` | inesperado — registrado com stack no log, **nunca** exposto |
 
 ---
 
-## 15. Estrutura do repositório
+## 12. Segurança
+
+- **JWT (HMAC-SHA2).** Segredo **obrigatório ≥ 32 caracteres** — ausente/fraco **aborta o boot**
+  (fail-fast; nada de segredo default forjador de tokens). Com segredo de 48 bytes o JJWT emite
+  HS512; o piso contratual do projeto é HS256. Claims: `sub` (id do usuário), `email`, `iat`, `exp`.
+- **Credenciais.** BCrypt; e-mail único com índice no banco; senha com mínimos de política.
+- **Autorização em cada consulta.** A identidade vem do contexto de segurança (`AuthFacade`) —
+  rota nenhuma aceita `usuarioId` do cliente; Specifications JPA e SQL nativo filtram por ela.
+  Detalhe de documento/outro usuário → `403 ACESSO_NEGADO` (comprovado em E2E: usuário intruso
+  lista 0 documentos e recebe 403 ao acessar detalhes).
+- **Rate limiting.** Janela fixa em memória por IP nas rotas de auth e por usuário nas rotas de
+  IA; excede → `429 LIMITE_EXCEDIDO`.
+- **Upload seguro.** Extensão em whitelist (`pdf/docx/txt`), verificação de *magic bytes* por tipo
+  (PNG/JPEG/PE executável mascarado como `.txt` é rejeitado), tamanho checado antes do processamento,
+  nomes sanitizados; armazenamento com nome UUID dentro do path configurado.
+- **CORS e headers.** Origens por lista explícita (`DOCUMIND_CORS_ORIGINS`); Spring Security com
+  headers de segurança; erros sem stack/include-message (`server.error.include-*: never`).
+- **SQL de vetores parametrizado.** `CAST(? AS vector)` e `?::vector` com `JdbcTemplate` —
+  sem concatenação de string em ponto nenhum da busca vetorial.
+
+---
+
+## 13. Honestidade da IA e política de falhas
+
+| Situação | Comportamento do sistema |
+|---|---|
+| IA não configurada (`DOCUMIND_AI_*` vazios) | o app **sobe**; endpoints de IA → `503 IA_NAO_CONFIGURADA`; `/api/health` mostra `ia.configurado=false` |
+| Provedor fora / timeout / 5xx | retry configurável; persistindo a falha → `502 PROVEDOR_IA_INDISPONIVEL` com texto genérico (detalhes só no log do servidor) |
+| Recuperação vazia ou abaixo do limiar | **não chama o modelo**; resposta fixa honesta persistida com estado `SEM_EVIDENCIA` |
+| Embeddings fora da dimensão esperada | lote abortado; tarefa/documento `FALHOU` com mensagem legível |
+| Qualquer pergunta do usuário | **sempre persistida** — o histórico é fiel mesmo em falha (estado `ERRO`) |
+
+Nada de respostas "concluídas" falsas: a mensagem de assistente traz sempre um estado explícito e
+a UI o exibe. Fontes inexistentes não existem — citação sem trecho recuperado é impossível por
+construção (§6).
+
+---
+
+## 14. Exclusão, retenção e reprocessamento
+
+- **Excluir documento:** cancelamento cooperativo do processamento (flag checada por lote) →
+  `DELETE` com **FK CASCADE** (trechos + embeddings + tarefas + citações) → remoção do arquivo no
+  disco. **Não sobra trecho recuperável pelo RAG** — a cascata é atômica no banco e o arquivo é
+  removido. Medida defensiva adicional: o worker verifica a existência do documento antes de cada
+  lote (`Processamento abortado: documento X removido`).
+- **Excluir coleção:** remove apenas o container; documentos permanecem; conversas com esse escopo
+  perdem a coleção via `SET NULL` (histórico intacto).
+- **Excluir conversa:** mensagens + citações removidas em cascata.
+- **Reprocessar:** enfileira nova tarefa; citações antigas preservam o **snapshot** (FK de trecho
+  é `SET NULL` de propósito), então referências antigas continuam legíveis mesmo com os trechos
+  reindexados.
+
+---
+
+## 15. Desempenho e operação
+
+- **Virtual threads** (`spring.threads.virtual.enabled=true`): I/O-bound do pipeline e das chamadas
+  de IA escala bem com threads baratas.
+- **Índice HNSW** (`vector_cosine_ops`): busca vetorial sublinear; pool Hikari 10/2.
+- **Embeddings em lotes** (`DOCUMIND_AI_EMBEDDING_BATCH_SIZE`) com timeout próprio; o processamento
+  é serial por documento com agendamento de reenfileiramento (tarefa órfã de boot volta à fila).
+- **Polling amigável**: a UI polla `status` apenas quando há documento em estado transitório
+  (`2,5 s`), desligando o loop com o acervo estável.
+- **Medição real (máquina de referência, GPU modesta com split CPU/GPU):**
+  processamento de TXT de ~700 bytes → 1 trecho indexado em ~5 s; resposta RAG completa
+  (`llama3.2:3b`) em ~45 s (554 tokens de entrada, 104 de saída). Em máquina com VRAM para 8B+,
+  a mesma rota tende a < 10 s com `llama3.1:8b`.
+
+---
+
+## 16. Testes
+
+### Backend (`cd backend`)
+
+| Suíte | Escopo | Como rodar |
+|---|---|---|
+| `ChunkingServiceTest` | limites, overlap, páginas, normalização | `.\mvnw.cmd test` |
+| `DocumentoUploadValidatorTest` | magic bytes, extensão, sanitização de nome | `.\mvnw.cmd test` |
+| `PromptTemplatesTest` | regras anti-injeção, numeração backend, escopo | `.\mvnw.cmd test` |
+| `JwtServiceTest` | fail-fast de segredo, roundtrip, expiração | `.\mvnw.cmd test` |
+| `DocumindIt` | banco real: extensão vector, 9 tabelas, dimensão 768 | `$env:DOCUMIND_IT="true"; .\mvnw.cmd test` |
+
+O conjunto de integração é **gated** por `DOCUMIND_IT` para não exigir infraestrutura em toda
+execução local/CI.
+
+### Front-end (`cd frontend`)
+
+```powershell
+npx ng build              # bundle de produção limpo (orçamentos de bundle aplicados)
+npx ng test               # testes unitários (vitest) — ex.: shell do app
+```
+
+### Smoke test E2E (manual, cenários de §1)
+
+Fluxo completo automatizável em script PowerShell: health → registro → upload → polling até
+`CONCLUIDO` → detalhe → coleção + vínculo → pergunta RAG (espera `OK` + citações) → busca
+semântica → teste de isolamento com segundo usuário. Validado executando tudo nesta máquina
+(reportado laranja/verde passo a passo no console; critérios: estado `CONCLUIDO` com trechos ≥ 1,
+`modeloEmbedding` correto, citações presentes, `403/404` no acesso alheio).
+
+---
+
+## 17. Estrutura do repositório
 
 ```
 documind/
 ├── backend/
-│   ├── mvnw.cmd / mvnw
+│   ├── mvnw / mvnw.cmd          # Maven wrapper (o projeto não exige Maven instalado)
 │   ├── pom.xml
-│   ├── .env                  (gerado pelo setup — NÃO versionado)
+│   ├── .env                     # gerado pelo setup — NUNCA versionado
 │   └── src/
-│       ├── main/java/com/documind/   (pacotes por domain, §2)
+│       ├── main/java/com/documind/     # pacotes por domínio (§3)
 │       ├── main/resources/
-│       │   ├── application.yml       (tudo sobrescrito por DOCUMIND_*)
+│       │   ├── application.yml         # defaults; tudo sobrescrito por DOCUMIND_*
 │       │   └── db/migration/V1__documind_schema.sql
-│       └── test/java/               (unitários + DocumindIt gated)
-├── frontend/                  (Angular 22 + PrimeNG; gerado por ng new)
+│       └── test/java/                  # unitários + DocumindIt (gated)
+├── frontend/                    # Angular 22 standalone + PrimeNG (gerado por ng new)
+│   └── src/app/
+│       ├── core/                # modelos, auth service, interceptor, guards, API client
+│       ├── layout/              # shell com navegação
+│       └── pages/               # login, register, documentos, colecoes, conversas, busca
 ├── scripts/
-│   ├── install-pgvector.ps1   (copia pgvector 0.8.7 p/ PostgreSQL 18 — admin)
-│   └── setup-database.ps1     (role+db+extensão + backend/.env local)
-├── .env.example
-├── .gitignore
-├── run-backend.ps1
-└── README.md
+│   ├── install-pgvector.ps1     # pgvector 0.8.7 → PostgreSQL 18 (admin)
+│   └── setup-database.ps1       # role + db + extensão + backend/.env local
+├── .env.example                 # template de todas as variáveis
+├── .gitignore                   # .env, *.env, storage, logs, node_modules, target...
+├── run-backend.ps1              # carrega backend/.env e sobe o Spring Boot
+├── LICENSE                      # MIT
+└── README.md                    # este documento
 ```
 
 ---
 
-## 16. Decisões técnicas
+## 18. Decisões técnicas
 
-1. **pgvector + SQL nativo via `JdbcTemplate`** para vetores (upsert/busca) com `CAST(? AS vector)`:
-   contole total do SQL de isolamento e indexação; JPA não mapeia o vetor (evita converters frágeis).
-2. **Dimensão fixa `vector(768)`** no schema: pgvector exige typmod para HNSW; a dimensão escolhida
-   acompanha o modelo de embeddings padrão e a verificação de troca é explícita.
-3. **Tarefas em banco, não em fila externa**: para portfólio local, isto é simples de operar,
-   observável (estados/tentativas/erro) e sobrevive a restart (scheduler reenfileira órfãos).
-4. **Providers por interface** (`ChatProvider`, `EmbeddingProvider`) + checks SEPARADOS:
-   sem chat mas com embeddings ⇒ busca semântica continua funcionando.
-5. **Citações com snapshot**: o texto do trecho é copiado para a citação; reprocessar/excluir trechos
-   não destrói o histórico; a FK de trecho é SET NULL de propósito.
-6. **Estado de mensagens explícito** (OK/SEM_EVIDENCIA/ERRO): o front nunca precisa "adivinhar".
-7. **`--release 21` com JDK qualquer ≥ 21**: build determinístico em command line (Windows/Idea friendly).
-8. **Angular standalone + PrimeNG**: templates sem NgModule, tema dark premium com tokens
-   SCSS definidos uma única vez (`styles.scss`): fundo `#0B0F14`, superfícies `#11161D`/`#1A212B`,
-   borda `#232C38`, texto `#E6EDF3`/`#8B98A9`, acento teal `#2DD4BF`, perigo `#F87171`,
-   aviso `#FBBF24`, sucesso `#34D399`; tipografia Inter.
-
----
-
-## 17. Limitações conhecidas
-
-- DOCX/TXT não têm noção de página (indica "página null") — estrutura do formato, honestamente
-  exposto na UI.
-- Rate limit fixed-window in-memory (não distribuído).
-- Fila de processamento é serial por documento; OCR/escaneados não suportados (PDF com imagem
-  sem texto ⇒ falha legível no documento).
-- O chat não faz streaming de tokens (requisito simples interno: resposta completa).
-- Trocar o **modelo de embeddings** exige migração (dimension fixa) — ver §5 e §9.
+1. **pgvector + SQL nativo (`JdbcTemplate`) para vetores**, com `CAST(? AS vector)`: controle total
+   dos predicados de isolamento e do índice; JPA não mapeia o tipo `vector` (evita converters
+   frágeis e SQL implícito no Hibernate).
+2. **Dimensão fixa `vector(768)` no schema.** pgvector exige typmod para HNSW. A dimensão escolhida
+   acompanha o modelo padrão; trocar de modelo de embeddings = migração explícita + alterar
+   `DOCUMIND_AI_EMBEDDING_DIMENSIONS` (o cliente valida cada lote recebido contra essa dimensão).
+3. **Fila em banco, não em broker externo.** Para portfólio local: simples de operar, observável
+   (estados, tentativas, último erro consultáveis) e sobrevive a reinicializações — o agendador
+   reenfileira tarefas órfãs no boot. O caminho para fila externa está no roadmap.
+4. **Providers por interface** (`ChatProvider`, `EmbeddingProvider`) + *checks* separados: sem chat,
+   mas com embeddings, a **busca semântica continua funcionando**; sem nenhum, `503` honesto.
+5. **Citações com snapshot.** O texto/página do trecho é copiado para a citação; reprocessar ou
+   reindexar não destrói o histórico — a FK de trecho é `SET NULL` de propósito.
+6. **Estados explícitos nas mensagens** (`OK` / `SEM_EVIDENCIA` / `ERRO`): a UI nunca "adivinha" o
+   resultado; o histórico conta a história verdadeira do uso.
+7. **`--release 21` com qualquer JDK ≥ 21**: build determinístico na linha de comando
+   (Windows/IDE-friendly; testado com JDK 24 emitindo bytecode 21).
+8. **Angular standalone + PrimeNG**: templates sem NgModule; tema dark premium através de tokens
+   SCSS definidos uma única vez (§3); interceptor funcional e services com HttpClient tipado.
+9. **PT-BR como língua do produto** (mensagens da API e da UI): portfólio voltado ao mercado
+   brasileiro; estados consolidados em tipos (`EstadoProcessamento`, códigos de erro estáveis).
 
 ---
 
-## 18. Roadmap
+## 19. Limitações conhecidas
+
+- DOCX/TXT não têm noção de página (`paginaInicio = null`) — limitação do formato, exposta
+  honestamente na UI.
+- Rate limiting em memória (janela fixa) — não distribuído, reinicia com o processo.
+- Processamento serial por documento; **OCR não suportado** — PDF escaneado (sem camada de texto)
+  falha com mensagem legível no estado do documento.
+- Chat sem streaming de tokens (resposta completa por requisição — decisão assumida; SSE no roadmap).
+- Permutar modelo de embeddings exige migração (dimensão fixa no schema) — §6, §18.
+- Números `paginaInicio` vêm da extração do PDF; PDFs mistos (texto + imagem) podem ter lacunas de paginação.
+
+---
+
+## 20. Roadmap
 
 - [ ] OCR (Tesseract) para PDFs escaneados
-- [ ] Streaming SSE do chat
-- [ ] Upload de CSV/planilhas com chunking estruturado
-- [ ] Progresso de processamento via WebSocket em tempo real (substituir polling)
+- [ ] Streaming SSE do chat (tokens em tempo real)
+- [ ] Upload de CSV/planilhas com chunking estruturado por linha
+- [ ] WebSocket para progresso do processamento (substituir polling)
+- [ ] Rate limit / fila externos (Redis, RabbitMQ) para escala horizontal
 - [ ] Métricas Prometheus + tracing distribuído
-- [ ] Rate limit/fila com Redis/RabbitMQ para escala horizontal
+- [ ] Multi-tenancy completo (workspace/team) com papéis
 
 ---
 
-## 19. Solução de problemas
+## 21. Solução de problemas
 
 | Sintoma | Causa provável | Ação |
 |---|---|---|
-| `IA_NAO_CONFIGURADA` no chat | variáveis `DOCUMIND_AI_*` ausentes | preencher `backend/.env` e reiniciar |
-| Backend não sobe: "DOCUMIND_JWT_SECRET obrigatoria" | segredo ausente/curto | rodar setup ou definir manualmente |
-| `5432` refused | Postgres parado | serviços do Windows / `pg_ctl start` |
-| Flyway falha cria índice HNSW | pgvector ausente | rodar `scripts/install-pgvector.ps1` (admin) e `CREATE EXTENSION vector` |
-| `IA provider timeout` no processamento | Ollama dormindo/pesado | `ollama run llama3.2:3b` para pré-carregar; subir timeout |
-| CORS no front | origem diferente da permitida | ajustar `DOCUMIND_CORS_ORIGINS` |
-| 401 em tudo após login | relógio atrasado (exp) / token expirado | relogar; conferir hora da máquina |
+| `IA_NAO_CONFIGURADA` no chat | `DOCUMIND_AI_*` ausentes | preencher `backend/.env` e reiniciar |
+| Boot aborta: "DOCUMIND_JWT_SECRET obrigatoria" | segredo ausente/curto | rodar o setup (gera aleatório) ou definir manualmente ≥ 32 chars |
+| `Connection refused` :5432 | PostgreSQL parado | iniciar serviço (`services.msc` / `pg_ctl start`) |
+| Flyway falha ao criar índice HNSW | pgvector ausente | `scripts/install-pgvector.ps1` (admin) + `CREATE EXTENSION vector` |
+| Upload recebe `429` | limite de uploads por hora atingido | esperar / subir `DOCUMIND_DOCUMENT_UPLOADS_PER_HOUR` em dev |
+| Chat estoura timeout | modelo pesado no hardware (`ollama ps` mostra split CPU) | usar modelo menor (ex.: `llama3.2:3b`) e/ou `DOCUMIND_AI_REQUEST_TIMEOUT_SECONDS=300`; pré-carregar com `ollama run <model>` |
+| Citações não aparecem (estado `SEM_EVIDENCIA`) | recuperação abaixo do limiar | conferir se o doc está na coleção escopo / ajustar `DOCUMIND_AI_MIN_RELEVANCE_THRESHOLD` |
+| Porta 4200 ocupada | outro dev server (ex.: outro projeto Angular) | `npx ng serve --port 4201` + incluir origem em `DOCUMIND_CORS_ORIGINS` |
+| CORS bloqueado no front | origem fora da lista | ajustar `DOCUMIND_CORS_ORIGINS` e reiniciar backend |
+| `401` em tudo após login | token expirado / relógio da máquina atrasado | relogar; sincronizar hora |
+| senha do `postgres` esquecida | — | redefinir editando o `pg_hba.conf` para `trust`, alterar a senha e restaurar a configuração |
 
 ---
 
-## 20. Licença
+## 22. Licença e créditos
 
-MIT — veja [LICENSE](LICENSE). Projeto de portfólio: use, adapte e mostre seu trabalho.
-Créditos: OpenAI-compatible API contract, pgvector community build para Windows.
+**MIT** — veja [LICENSE](LICENSE). Portfólio: use, adapte e mostre seu trabalho.
+
+Créditos que sustentam este projeto:
+
+- **pgvector** por tornar o PostgreSQL um banco vetorial de primeira classe;
+- **Ollama** e a comunidade de modelos abertos (`llama3.2`, `nomic-embed-text`);
+- **Apache PDFBox / POI** pela extração de texto robusta;
+- **PrimeNG / PrimeIcons** e o ecossistema Angular;
+- o contrato **OpenAI-compatible**, que padronizou a integração de modelos.
+
+<div align="center">
+<sub>Construído com foco em correção de engenharia e em honestidade de IA — respostas sem evidência são respondidas com transparência, nunca com invenção.</sub>
+</div>
