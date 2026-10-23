@@ -9,4 +9,4 @@
  * Privacidade: a validação é local, mas o arquivo é versionado — se a sua
  * chave pessoal tiver restrições, mantenha-a fora do commit.
  */
-export const PRIMEUI_LICENSE = '';
+export const PRIMEUI_LICENSE = 'eyJpZCI6IjAwZmJlOTFjLWI1ZDItNGQ0MS04ZjBiLTUzODVmYzZjMDY4ZSIsInByb2R1Y3QiOiJwcmltZXVpIiwidGllciI6ImNvbW11bml0eSIsInR5cGUiOiJkZXYiLCJpYXQiOjE3OTI3OTk0MjAsImV4cCI6MTgyNDMzNTQyMH0.qlbvFJKOEaJuOtq-iop9pdz34QN9J6aclsFMk7g5ljWtXG9CWPojfYlIFl3u37y5eI1qz8gxBgEQFLYuymMxBA';
