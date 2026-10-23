@@ -72,7 +72,7 @@ public class VectorSearchRepository {
                 WHERE t.modelo_embedding = ?
                   AND d.usuario_id = ?
                   AND d.estado = 'CONCLUIDO'
-                  AND (? IS NULL OR EXISTS (
+                  AND (CAST(? AS bigint) IS NULL OR EXISTS (
                         SELECT 1 FROM documento_colecao dc
                         WHERE dc.documento_id = d.id AND dc.colecao_id = ?))
                   AND (1 - (t.embedding <=> CAST(? AS vector))) >= ?
