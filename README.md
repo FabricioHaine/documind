@@ -22,6 +22,14 @@
 > responde honestamente *"não encontrei evidência nos documentos"* em vez de deixar o modelo
 > inventar.
 
+## Telas do produto
+
+| **Login (JWT + BCrypt)** | **Documentos (ciclo de vida com polling)** |
+|---|---|
+| ![Login](docs/screenshots/01-login.png) | ![Documentos](docs/screenshots/02-documentos.png) |
+| **Chat com citações verificáveis** | **Busca semântica (pgvector + HNSW)** |
+| ![Chat com citações](docs/screenshots/03-chat-citacoes.png) | ![Busca semântica](docs/screenshots/04-busca-semantica.png) |
+
 **DocuMind** é uma aplicação full-stack de **RAG (Retrieval-Augmented Generation)** construída como
 portfólio profissional, com:
 
@@ -398,6 +406,12 @@ npm start                    # http://localhost:4200
 > e autorize a nova origem no backend: `DOCUMIND_CORS_ORIGINS=http://localhost:4200,http://localhost:4201`
 > (o `.env` já aceita lista separada por vírgula).
 
+> **Licença PrimeUI (PrimeNG 22).** O PrimeNG v22 usa o modelo de licença Community/Commercial e
+> exibe um aviso local (`Invalid PrimeUI License`) quando não há chave configurada — **sem bloquear
+> nenhuma funcionalidade**. Para devs individuais a chave Community é gratuita: solicite em
+> <https://primeui.dev> e cole-a em `frontend/src/app/core/primeui-license.ts`; a validação é
+> 100% local. Sem a chave, o app funciona normalmente e apenas o aviso permanece.
+
 ### 9.4 Testes rápidos pós-instalação
 
 ```bash
@@ -701,11 +715,15 @@ npx ng test               # testes unitários (vitest) — ex.: shell do app
 
 ### Smoke test E2E (manual, cenários de §1)
 
-Fluxo completo automatizável em script PowerShell: health → registro → upload → polling até
-`CONCLUIDO` → detalhe → coleção + vínculo → pergunta RAG (espera `OK` + citações) → busca
-semântica → teste de isolamento com segundo usuário. Validado executando tudo nesta máquina
-(reportado laranja/verde passo a passo no console; critérios: estado `CONCLUIDO` com trechos ≥ 1,
-`modeloEmbedding` correto, citações presentes, `403/404` no acesso alheio).
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/smoke-test.ps1
+```
+
+O script `scripts/smoke-test.ps1` automatiza o fluxo completo: health → registro (2 usuários) →
+upload TXT → polling até `CONCLUIDO` → detalhe → coleção + vínculo → pergunta RAG (espera `OK` +
+citações) → pergunta sem evidência → busca semântica → teste de isolamento entre usuários.
+Reportado laranja/verde passo a passo no console; critérios: estado `CONCLUIDO` com trechos ≥ 1,
+`modeloEmbedding` correto, citações presentes, `403/404` no acesso alheio.
 
 ---
 
@@ -730,7 +748,10 @@ documind/
 │       └── pages/               # login, register, documentos, colecoes, conversas, busca
 ├── scripts/
 │   ├── install-pgvector.ps1     # pgvector 0.8.7 → PostgreSQL 18 (admin)
-│   └── setup-database.ps1       # role + db + extensão + backend/.env local
+│   ├── setup-database.ps1       # role + db + extensão + backend/.env local
+│   └── smoke-test.ps1           # E2E dos cenários de §16 (health, chat, busca, isolamento)
+├── docs/
+│   └── screenshots/             # telas do produto referenciadas no README
 ├── .env.example                 # template de todas as variáveis
 ├── .gitignore                   # .env, *.env, storage, logs, node_modules, target...
 ├── run-backend.ps1              # carrega backend/.env e sobe o Spring Boot
@@ -804,6 +825,7 @@ documind/
 | Citações não aparecem (estado `SEM_EVIDENCIA`) | recuperação abaixo do limiar | conferir se o doc está na coleção escopo / ajustar `DOCUMIND_AI_MIN_RELEVANCE_THRESHOLD` |
 | Porta 4200 ocupada | outro dev server (ex.: outro projeto Angular) | `npx ng serve --port 4201` + incluir origem em `DOCUMIND_CORS_ORIGINS` |
 | CORS bloqueado no front | origem fora da lista | ajustar `DOCUMIND_CORS_ORIGINS` e reiniciar backend |
+| Aviso `Invalid PrimeUI License` no canto | PrimeNG 22 sem chave registrada (validação 100% local) | chave Community gratuita em `primeui.dev` → `core/primeui-license.ts` |
 | `401` em tudo após login | token expirado / relógio da máquina atrasado | relogar; sincronizar hora |
 | senha do `postgres` esquecida | — | redefinir editando o `pg_hba.conf` para `trust`, alterar a senha e restaurar a configuração |
 
