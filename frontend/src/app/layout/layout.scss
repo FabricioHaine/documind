@@ -145,5 +145,12 @@
   flex: 1;
   margin-left: var(--dm-sidebar-w);
   padding: 1.6rem 2rem;
+}
+
+/* Coluna padrão das páginas: largura fixa, centrada na área útil —
+   o mesmo container para todas as telas (grid de cartões, listas, chat). */
+.pagina {
+  width: 100%;
   max-width: 1200px;
+  margin-inline: auto;
 }
