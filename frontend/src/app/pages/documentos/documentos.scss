@@ -41,6 +41,11 @@
   flex-direction: column;
   gap: 0.65rem;
 
+  /* Tag de estado acompanha o conteúdo, sem esticar a linha toda. */
+  p-tag {
+    align-self: flex-start;
+  }
+
   header {
     display: flex;
     gap: 0.7rem;
